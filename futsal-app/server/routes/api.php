@@ -1,37 +1,73 @@
 <?php
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Models\User;
-use Illuminate\Support\Facades\Hash;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\FieldController;
+use App\Http\Controllers\ScheduleController;
+use App\Http\Controllers\BookingController;
+use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\BlockedSlotController;
+use App\Http\Controllers\OperationalHourController;
+use App\Http\Controllers\ReportController;
 
-Route::post('/register', function (Request $request) {
-    $request->validate([
-        'name' => 'required|string|max:255',
-        'email' => 'required|string|email|max:255|unique:users',
-        'password' => 'required|string|min:6|confirmed',
-    ]);
+// ===== PUBLIC ROUTES =====
+Route::post('/register', [AuthController::class, 'register']);
+Route::post('/login', [AuthController::class, 'login']);
+Route::post('/admin/login', [AuthController::class, 'adminLogin']);
 
-    $user = User::create([
-        'name' => $request->name,
-        'email' => $request->email,
-        'password' => Hash::make($request->password),
-    ]);
+// Public: list active fields
+Route::get('/fields', [FieldController::class, 'index']);
+Route::get('/fields/{id}', [FieldController::class, 'show']);
 
-    return response()->json($user, 201);
+// Public: schedule
+Route::get('/schedule/weekly', [ScheduleController::class, 'getWeeklySchedule']);
+Route::get('/schedule/available', [ScheduleController::class, 'getAvailableSlots']);
+
+// ===== AUTHENTICATED USER ROUTES =====
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('/profile', [AuthController::class, 'profile']);
+
+    // Bookings
+    Route::get('/bookings', [BookingController::class, 'index']);
+    Route::post('/bookings', [BookingController::class, 'store']);
+    Route::get('/bookings/{id}', [BookingController::class, 'show']);
+    Route::get('/bookings/{id}/pdf', [BookingController::class, 'downloadPdf']);
+
+    // Upload payment proof (re-upload)
+    Route::post('/payments/{id}/upload-proof', [PaymentController::class, 'uploadProof']);
 });
 
-Route::post('/login', function (Request $request) {
-    $request->validate([
-        'email' => 'required|string|email',
-        'password' => 'required|string',
-    ]);
+// ===== ADMIN ROUTES =====
+Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {
+    // Dashboard
+    Route::get('/dashboard', [BookingController::class, 'todayStats']);
 
-    $user = User::where('email', $request->email)->first();
+    // Manage Bookings
+    Route::put('/bookings/{id}/status', [BookingController::class, 'updateStatus']);
 
-    if ($user && Hash::check($request->password, $user->password)) {
-        return response()->json($user);
-    }
+    // Payments
+    Route::get('/payments', [PaymentController::class, 'index']);
+    Route::put('/payments/{id}/verify', [PaymentController::class, 'verify']);
+    Route::get('/payments/{id}/proof', [PaymentController::class, 'getProofImage']);
 
-    return response()->json(['message' => 'Email atau password salah'], 401);
+    // Fields Management
+    Route::get('/fields', [FieldController::class, 'all']);
+    Route::post('/fields', [FieldController::class, 'store']);
+    Route::put('/fields/{id}', [FieldController::class, 'update']);
+    Route::post('/fields/{id}/image', [FieldController::class, 'uploadImage']);
+    Route::delete('/fields/{id}', [FieldController::class, 'destroy']);
+
+    // Operational Hours
+    Route::get('/fields/{fieldId}/hours', [OperationalHourController::class, 'index']);
+    Route::put('/fields/{fieldId}/hours', [OperationalHourController::class, 'update']);
+
+    // Blocked Slots
+    Route::get('/blocked-slots', [BlockedSlotController::class, 'index']);
+    Route::post('/blocked-slots', [BlockedSlotController::class, 'store']);
+    Route::delete('/blocked-slots/{id}', [BlockedSlotController::class, 'destroy']);
+
+    // Reports
+    Route::get('/reports/monthly', [ReportController::class, 'monthly']);
+    Route::get('/reports/export-pdf', [ReportController::class, 'exportPdf']);
 });

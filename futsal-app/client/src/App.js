@@ -1,11 +1,44 @@
 import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import axios from 'axios';
+import { isLoggedIn, isAdmin } from './utils/auth';
 
+// Layouts
+import UserLayout from './components/UserLayout';
+import AdminLayout from './components/AdminLayout';
 
+// User Pages
+import Schedule from './pages/user/Schedule';
+import BookingPayment from './pages/user/BookingPayment';
+import BookingHistory from './pages/user/BookingHistory';
+import BookingDetail from './pages/user/BookingDetail';
+
+// Admin Pages
+import AdminLogin from './pages/admin/AdminLogin';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import ManageBookings from './pages/admin/ManageBookings';
+import PaymentVerification from './pages/admin/PaymentVerification';
+import BlockSlots from './pages/admin/BlockSlots';
+import ManageFields from './pages/admin/ManageFields';
+import FinancialReport from './pages/admin/FinancialReport';
 
 axios.defaults.withCredentials = true;
 axios.defaults.baseURL = 'http://127.0.0.1:8000';
+
+// =============================================
+// ROUTE GUARDS
+// =============================================
+
+function ProtectedRoute({ children }) {
+  if (!isLoggedIn()) return <Navigate to="/login" replace />;
+  return children;
+}
+
+function AdminRoute({ children }) {
+  if (!isLoggedIn()) return <Navigate to="/admin/login" replace />;
+  if (!isAdmin()) return <Navigate to="/schedule" replace />;
+  return children;
+}
 
 // =============================================
 // LOGIN / REGISTER COMPONENT (preserved from original)
@@ -54,7 +87,7 @@ const Logo = () => (
   </div>
 );
 
-const SocialButton = ({ icon, label }) => (
+const SocialButton = ({ icon }) => (
   <button style={{
     flex: 1,
     display: "flex",
@@ -127,23 +160,32 @@ function FutsalLogin() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
+    setLoading(true);
 
     try {
       if (mode === "login") {
         const res = await axios.post("/api/login", { email, password });
-        localStorage.setItem("user", JSON.stringify(res.data));
-        alert("Login berhasil! ✅");
+        const data = res.data;
+        // Save token and user data for Sanctum auth
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("user", JSON.stringify(data.user));
+        // Redirect based on role
+        if (data.user.role === 'admin') {
+          window.location.href = '/admin/dashboard';
+        } else {
+          window.location.href = '/schedule';
+        }
       } else {
-        if (password !== confirmPassword) return alert("Password tidak cocok!");
-
+        if (password !== confirmPassword) { setLoading(false); return alert("Password tidak cocok!"); }
         await axios.post("/api/register", {
-          name: name,
-          email: email,
-          password: password,
-          password_confirmation: confirmPassword
+          name, email, password,
+          password_confirmation: confirmPassword,
+          phone
         });
         alert("Registrasi berhasil! Silakan login ✅");
         setMode("login");
@@ -151,6 +193,8 @@ function FutsalLogin() {
     } catch (err) {
       console.error(err);
       alert(err.response?.data?.message || "Koneksi Error: Periksa terminal Laravel!");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -253,6 +297,11 @@ function FutsalLogin() {
             <div className="field-row">
               <InputField type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} />
             </div>
+            {mode === "register" && (
+              <div className="field-row">
+                <InputField type="tel" placeholder="No. HP (opsional)" value={phone} onChange={e => setPhone(e.target.value)} />
+              </div>
+            )}
             <div className="field-row">
               <InputField type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} />
             </div>
@@ -271,22 +320,28 @@ function FutsalLogin() {
           <button
             type="submit"
             onClick={handleSubmit}
+            disabled={loading}
             style={{
               width: "100%",
               marginTop: "20px",
               padding: "12px",
-              background: "linear-gradient(135deg, #16a34a 0%, #22c55e 100%)",
+              background: loading ? "#86efac" : "linear-gradient(135deg, #16a34a 0%, #22c55e 100%)",
               border: "none",
               borderRadius: "10px",
               color: "white",
               fontSize: "14px",
               fontWeight: "600",
               fontFamily: "'Poppins', sans-serif",
-              cursor: "pointer",
+              cursor: loading ? "wait" : "pointer",
               boxShadow: "0 4px 16px rgba(22,163,74,0.35)",
-              transition: "0.3s"
+              transition: "0.3s",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px"
             }}
           >
+            {loading && <div className="spinner" style={{ width: '16px', height: '16px', borderWidth: '2px' }}></div>}
             {mode === "login" ? "Sign in" : "Sign up"}
           </button>
 
@@ -324,6 +379,21 @@ function FutsalLogin() {
               {mode === "login" ? "Sign up" : "Sign in"}
             </button>
           </p>
+
+          {mode === "login" && (
+            <div style={{ textAlign: "center", marginTop: "12px" }}>
+              <button
+                onClick={() => window.location.href = '/admin/login'}
+                style={{
+                  background: "none", border: "none",
+                  color: "#9ca3af", fontSize: "11px",
+                  cursor: "pointer", fontWeight: "500"
+                }}
+              >
+                🛡️ Login sebagai Admin
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </>
@@ -344,7 +414,60 @@ export default function App() {
         <Route path="/" element={<FutsalLogin />} />
         <Route path="/login" element={<FutsalLogin />} />
 
+        {/* User Routes (Protected) */}
+        <Route path="/schedule" element={
+          <ProtectedRoute>
+            <UserLayout><Schedule /></UserLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/booking" element={
+          <ProtectedRoute>
+            <UserLayout><BookingPayment /></UserLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/bookings" element={
+          <ProtectedRoute>
+            <UserLayout><BookingHistory /></UserLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/bookings/:id" element={
+          <ProtectedRoute>
+            <UserLayout><BookingDetail /></UserLayout>
+          </ProtectedRoute>
+        } />
 
+        {/* Admin Routes */}
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin/dashboard" element={
+          <AdminRoute>
+            <AdminLayout><AdminDashboard /></AdminLayout>
+          </AdminRoute>
+        } />
+        <Route path="/admin/bookings" element={
+          <AdminRoute>
+            <AdminLayout><ManageBookings /></AdminLayout>
+          </AdminRoute>
+        } />
+        <Route path="/admin/payments" element={
+          <AdminRoute>
+            <AdminLayout><PaymentVerification /></AdminLayout>
+          </AdminRoute>
+        } />
+        <Route path="/admin/fields" element={
+          <AdminRoute>
+            <AdminLayout><ManageFields /></AdminLayout>
+          </AdminRoute>
+        } />
+        <Route path="/admin/block-slots" element={
+          <AdminRoute>
+            <AdminLayout><BlockSlots /></AdminLayout>
+          </AdminRoute>
+        } />
+        <Route path="/admin/reports" element={
+          <AdminRoute>
+            <AdminLayout><FinancialReport /></AdminLayout>
+          </AdminRoute>
+        } />
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
