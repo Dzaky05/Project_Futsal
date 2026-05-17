@@ -21,7 +21,7 @@ export default function BookingPayment() {
   const [formData, setFormData] = useState({
     booking_date: date || '',
     start_time: startTime || '',
-    end_time: endTime || '',
+    duration_hours: 1,
     payment_method: '',
     notes: '',
   });
@@ -36,11 +36,14 @@ export default function BookingPayment() {
     }
   }, [fieldId]);
 
-  const calcDuration = () => {
-    if (!formData.start_time || !formData.end_time) return 0;
-    const [sh, sm] = formData.start_time.split(':').map(Number);
-    const [eh, em] = formData.end_time.split(':').map(Number);
-    return Math.max(0, (eh * 60 + em - sh * 60 - sm) / 60);
+  const calcDuration = () => formData.duration_hours;
+
+  const calcEndTime = () => {
+    if (!formData.start_time) return '';
+    const [h, m] = formData.start_time.split(':').map(Number);
+    const endHour = h + formData.duration_hours;
+    if (endHour > 23) return ''; // Invalid time
+    return `${String(endHour).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
   };
 
   const duration = calcDuration();
@@ -59,7 +62,11 @@ export default function BookingPayment() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.payment_method) return alert('Pilih metode pembayaran!');
-    if (duration <= 0) return alert('Durasi tidak valid!');
+    if (!formData.start_time) return alert('Pilih jam mulai!');
+    if (calcDuration() <= 0) return alert('Durasi tidak valid!');
+
+    const endTime = calcEndTime();
+    if (!endTime) return alert('Jam selesai melebihi 23:00. Pilih durasi lebih pendek!');
 
     setSubmitting(true);
     try {
@@ -67,7 +74,7 @@ export default function BookingPayment() {
       payload.append('field_id', fieldId);
       payload.append('booking_date', formData.booking_date);
       payload.append('start_time', formData.start_time);
-      payload.append('end_time', formData.end_time);
+      payload.append('end_time', endTime);
       payload.append('payment_method', formData.payment_method);
       payload.append('notes', formData.notes);
       if (proofFile) payload.append('payment_proof', proofFile);
@@ -133,20 +140,48 @@ export default function BookingPayment() {
                     min={new Date().toISOString().split('T')[0]} required />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Durasi</label>
-                  <input className="form-input" value={`${duration} jam`} disabled />
-                </div>
-                <div className="form-group">
                   <label className="form-label">Jam Mulai</label>
                   <input type="time" className="form-input" value={formData.start_time}
                     onChange={e => setFormData({ ...formData, start_time: e.target.value })} required />
                 </div>
-                <div className="form-group">
-                  <label className="form-label">Jam Selesai</label>
-                  <input type="time" className="form-input" value={formData.end_time}
-                    onChange={e => setFormData({ ...formData, end_time: e.target.value })} required />
+              </div>
+
+              {/* Duration Selector */}
+              <div className="form-group" style={{ marginTop: '16px' }}>
+                <label className="form-label">⏱️ Pilih Durasi Sewa</label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+                  {[1, 2, 3, 4, 5, 6, 7, 8].map(hours => (
+                    <button
+                      key={hours}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, duration_hours: hours })}
+                      style={{
+                        padding: '10px', borderRadius: 'var(--radius-sm)', border: 'none',
+                        cursor: 'pointer', fontSize: '14px', fontWeight: '600',
+                        background: formData.duration_hours === hours ? 'var(--green-600)' : 'var(--gray-200)',
+                        color: formData.duration_hours === hours ? 'white' : 'var(--gray-700)',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      {hours}j
+                    </button>
+                  ))}
                 </div>
               </div>
+
+              {/* End Time Display */}
+              {formData.start_time && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px' }}>
+                  <div className="form-group">
+                    <label className="form-label">Durasi</label>
+                    <input className="form-input" value={`${calcDuration()} jam`} disabled />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Jam Selesai</label>
+                    <input className="form-input" value={calcEndTime()} disabled style={{ background: 'var(--green-50)', color: 'var(--green-700)', fontWeight: '600' }} />
+                  </div>
+                </div>
+              )}
               <div className="form-group" style={{ marginTop: '4px' }}>
                 <label className="form-label">Catatan (opsional)</label>
                 <textarea className="form-input form-textarea" placeholder="Catatan tambahan..."
@@ -254,11 +289,11 @@ export default function BookingPayment() {
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: 'var(--gray-500)' }}>Jam</span>
-                  <span style={{ fontWeight: '600' }}>{formData.start_time || '-'} - {formData.end_time || '-'}</span>
+                  <span style={{ fontWeight: '600' }}>{formData.start_time || '-'} - {calcEndTime() || '-'}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: 'var(--gray-500)' }}>Durasi</span>
-                  <span style={{ fontWeight: '600' }}>{duration} jam</span>
+                  <span style={{ fontWeight: '600' }}>{calcDuration()} jam</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: 'var(--gray-500)' }}>Harga/Jam</span>

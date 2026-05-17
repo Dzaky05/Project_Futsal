@@ -21,9 +21,27 @@ export default function Schedule() {
   const fetchSchedule = useCallback(() => {
     if (!selectedField) return;
     setLoading(true);
-    api.get(`/schedule/weekly/${selectedField}`, { params: { week_offset: weekOffset } })
-      .then(res => { setSchedule(res.data.data || res.data); setLoading(false); })
-      .catch(() => setLoading(false));
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() + (weekOffset * 7));
+    const dateStr = startDate.toISOString().split('T')[0];
+    api.get('/schedule/weekly', { params: { field_id: selectedField, start_date: dateStr } })
+      .then(res => {
+        const data = res.data.data || res.data;
+        // Transform schedule to add time property to slots
+        const days = (data.schedule || []).map(day => ({
+          ...day,
+          slots: (day.slots || []).map(slot => ({
+            ...slot,
+            time: slot.start_time // Add time property for compatibility
+          }))
+        }));
+        setSchedule({ days, ...data });
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Schedule error:', err);
+        setLoading(false);
+      });
   }, [selectedField, weekOffset]);
 
   useEffect(() => { fetchSchedule(); }, [fetchSchedule]);
@@ -32,7 +50,7 @@ export default function Schedule() {
 
   const handleSlotClick = (slot, date) => {
     if (slot.status !== 'available') return;
-    navigate(`/booking?field_id=${selectedField}&date=${date}&start=${slot.time}&end=${slot.end_time}`);
+    navigate(`/booking?field_id=${selectedField}&date=${date}&start=${slot.time}`);
   };
 
   const getSlotClass = (status) => {
