@@ -334,12 +334,6 @@ function FutsalLogin() {
             <div style={{ flex: 1, height: "1px", background: "rgba(134,239,172,0.5)" }} />
           </div>
 
-          <div style={{ display: "flex", gap: "10px" }}>
-            <SocialButton icon={<GoogleIcon />} />
-            <SocialButton icon={<FacebookIcon />} />
-            <SocialButton icon={<TwitterIcon />} />
-          </div>
-
           <p style={{
             textAlign: "center",
             marginTop: "20px",
