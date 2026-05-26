@@ -34,13 +34,14 @@ class BookingController extends Controller
         $totalPrice = $durationHours * $field->price_per_hour;
 
         // Check for conflicting bookings
+        // Use >= for end_time so the end_time slot is also protected
         $conflict = Booking::where('field_id', $request->field_id)
             ->where('booking_date', $request->booking_date)
             ->whereIn('status', ['pending', 'confirmed'])
             ->where(function ($q) use ($request) {
                 $q->where(function ($q2) use ($request) {
-                    $q2->where('start_time', '<', $request->end_time)
-                        ->where('end_time', '>', $request->start_time);
+                    $q2->where('start_time', '<=', $request->end_time)
+                        ->where('end_time', '>=', $request->start_time);
                 });
             })
             ->exists();

@@ -60,18 +60,24 @@ class ScheduleController extends Controller
                 $slotEnd = $time->copy()->addHour()->format('H:i');
                 $currentDate = $date->format('Y-m-d');
 
-                // Check if booked
-                $isBooked = $bookings->first(function ($b) use ($currentDate, $slotStart, $slotEnd) {
+                // Check if booked — normalize time formats to H:i for consistent comparison
+                // Use >= so that the end_time slot is also marked as booked
+                $isBooked = $bookings->first(function ($b) use ($currentDate, $slotStart) {
+                    $bStart = Carbon::parse($b->start_time)->format('H:i');
+                    $bEnd   = Carbon::parse($b->end_time)->format('H:i');
                     return $b->booking_date->format('Y-m-d') === $currentDate
-                        && $b->start_time <= $slotStart
-                        && $b->end_time > $slotStart;
+                        && $bStart <= $slotStart
+                        && $bEnd >= $slotStart;
                 });
 
-                // Check if blocked
+                // Check if blocked — normalize time formats to H:i
+                // Use >= so that the end_time slot is also marked as blocked
                 $isBlocked = $blockedSlots->first(function ($bs) use ($currentDate, $slotStart) {
+                    $bsStart = Carbon::parse($bs->start_time)->format('H:i');
+                    $bsEnd   = Carbon::parse($bs->end_time)->format('H:i');
                     return $bs->date->format('Y-m-d') === $currentDate
-                        && $bs->start_time <= $slotStart
-                        && $bs->end_time > $slotStart;
+                        && $bsStart <= $slotStart
+                        && $bsEnd >= $slotStart;
                 });
 
                 // Check if past
@@ -154,11 +160,15 @@ class ScheduleController extends Controller
             $slotEnd = $time->copy()->addHour()->format('H:i');
 
             $isBooked = $bookings->contains(function ($b) use ($slotStart) {
-                return $b->start_time <= $slotStart && $b->end_time > $slotStart;
+                $bStart = Carbon::parse($b->start_time)->format('H:i');
+                $bEnd   = Carbon::parse($b->end_time)->format('H:i');
+                return $bStart <= $slotStart && $bEnd >= $slotStart;
             });
 
             $isBlocked = $blockedSlots->contains(function ($bs) use ($slotStart) {
-                return $bs->start_time <= $slotStart && $bs->end_time > $slotStart;
+                $bsStart = Carbon::parse($bs->start_time)->format('H:i');
+                $bsEnd   = Carbon::parse($bs->end_time)->format('H:i');
+                return $bsStart <= $slotStart && $bsEnd >= $slotStart;
             });
 
             $isPast = Carbon::parse("{$date->format('Y-m-d')} $slotStart")->lt(Carbon::now());

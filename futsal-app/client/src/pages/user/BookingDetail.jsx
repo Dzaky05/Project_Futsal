@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import api from '../../api/axios';
+import api, { downloadPdf } from '../../api/axios';
 import { formatRupiah, formatDate, BOOKING_STATUS, PAYMENT_STATUS, PAYMENT_METHODS } from '../../utils/auth';
 
 export default function BookingDetail() {
@@ -112,7 +112,7 @@ export default function BookingDetail() {
                 <div style={{ marginTop: '8px' }}>
                   <p style={{ fontSize: '13px', fontWeight: '600', color: 'var(--gray-600)', marginBottom: '8px' }}>Bukti Pembayaran:</p>
                   <img
-                    src={`http://127.0.0.1:8000/api/payments/${booking.payment.id}/proof`}
+                    src={`http://127.0.0.1:8000/api/admin/payments/${booking.payment.id}/proof`}
                     alt="Bukti Pembayaran"
                     style={{ maxWidth: '100%', borderRadius: 'var(--radius-md)', border: '1px solid var(--gray-200)' }}
                     onError={e => { e.target.style.display = 'none'; }}
@@ -131,9 +131,7 @@ export default function BookingDetail() {
 
       {/* Actions */}
       <div style={{ display: 'flex', gap: '12px', marginTop: '24px', justifyContent: 'center', flexWrap: 'wrap' }}>
-        <button className="btn btn-primary" onClick={() => {
-          window.open(`http://127.0.0.1:8000/api/bookings/${booking.id}/pdf`, '_blank');
-        }}>📄 Download PDF</button>
+        <button className="btn btn-primary" onClick={() => downloadPdf(booking.id)}>📄 Download PDF</button>
         <button className="btn btn-outline" onClick={() => navigate('/schedule')}>📅 Booking Lagi</button>
       </div>
     </div>

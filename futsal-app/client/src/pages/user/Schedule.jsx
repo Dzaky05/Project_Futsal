@@ -13,18 +13,41 @@ export default function Schedule() {
   useEffect(() => {
     api.get('/fields').then(res => {
       const f = res.data.data || res.data;
-      setFields(f);
-      if (f.length > 0) setSelectedField(f[0].id);
+      setFields(Array.isArray(f) ? f : []);
+      if (Array.isArray(f) && f.length > 0) setSelectedField(f[0].id);
     }).catch(console.error);
+  }, []);
+
+  // Calculate the Monday start_date based on weekOffset
+  const getStartDate = useCallback((offset) => {
+    const now = new Date();
+    const dayOfWeek = now.getDay(); // 0=Sun, 1=Mon, ...
+    const mondayDiff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const monday = new Date(now);
+    monday.setDate(now.getDate() + mondayDiff + (offset * 7));
+    const year = monday.getFullYear();
+    const month = String(monday.getMonth() + 1).padStart(2, '0');
+    const day = String(monday.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }, []);
 
   const fetchSchedule = useCallback(() => {
     if (!selectedField) return;
     setLoading(true);
-    api.get(`/schedule/weekly/${selectedField}`, { params: { week_offset: weekOffset } })
-      .then(res => { setSchedule(res.data.data || res.data); setLoading(false); })
-      .catch(() => setLoading(false));
-  }, [selectedField, weekOffset]);
+    const startDate = getStartDate(weekOffset);
+    api.get('/schedule/weekly', {
+      params: { field_id: selectedField, start_date: startDate }
+    })
+      .then(res => {
+        setSchedule(res.data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error('Schedule fetch error:', err);
+        setSchedule(null);
+        setLoading(false);
+      });
+  }, [selectedField, weekOffset, getStartDate]);
 
   useEffect(() => { fetchSchedule(); }, [fetchSchedule]);
 
@@ -32,7 +55,7 @@ export default function Schedule() {
 
   const handleSlotClick = (slot, date) => {
     if (slot.status !== 'available') return;
-    navigate(`/booking?field_id=${selectedField}&date=${date}&start=${slot.time}&end=${slot.end_time}`);
+    navigate(`/booking?field_id=${selectedField}&date=${date}&start=${slot.start_time}&end=${slot.end_time}`);
   };
 
   const getSlotClass = (status) => {
@@ -44,7 +67,47 @@ export default function Schedule() {
     }
   };
 
+  const getSlotLabel = (status) => {
+    switch (status) {
+      case 'available': return 'Klik untuk booking';
+      case 'booked': return 'Sudah dipesan';
+      case 'blocked': return 'Diblokir';
+      default: return 'Sudah lewat';
+    }
+  };
+
   const currentField = fields.find(f => f.id === selectedField);
+
+  // Format period string from schedule response
+  const formatPeriod = () => {
+    if (!schedule?.start_date || !schedule?.end_date) return 'Memuat...';
+    const opts = { day: 'numeric', month: 'short', year: 'numeric' };
+    const start = new Date(schedule.start_date + 'T00:00:00').toLocaleDateString('id-ID', opts);
+    const end = new Date(schedule.end_date + 'T00:00:00').toLocaleDateString('id-ID', opts);
+    return `${start} — ${end}`;
+  };
+
+  // Safely get facilities array (model already casts to array, but handle edge cases)
+  const getFacilities = (field) => {
+    if (!field?.facilities) return [];
+    if (Array.isArray(field.facilities)) return field.facilities;
+    try { return JSON.parse(field.facilities); } catch { return []; }
+  };
+
+  // Get all unique time slots across all days for consistent row rendering
+  const getAllTimeSlots = () => {
+    if (!schedule?.schedule) return [];
+    const timesSet = new Set();
+    schedule.schedule.forEach(day => {
+      if (day.slots) {
+        day.slots.forEach(slot => timesSet.add(slot.start_time));
+      }
+    });
+    return [...timesSet].sort();
+  };
+
+  const days = schedule?.schedule || [];
+  const allTimes = getAllTimeSlots();
 
   return (
     <div className="fade-in">
@@ -88,7 +151,7 @@ export default function Schedule() {
               <span style={{ fontSize: '13px', opacity: 0.9 }}>
                 💰 Rp {Number(currentField.price_per_hour).toLocaleString('id-ID')}/jam
               </span>
-              {currentField.facilities && JSON.parse(currentField.facilities || '[]').map((f, i) => (
+              {getFacilities(currentField).map((f, i) => (
                 <span key={i} style={{ fontSize: '12px', opacity: 0.8, background: 'rgba(255,255,255,0.15)', padding: '2px 10px', borderRadius: '12px' }}>
                   {f}
                 </span>
@@ -106,7 +169,7 @@ export default function Schedule() {
           </button>
           <div style={{ textAlign: 'center' }}>
             <span style={{ fontWeight: '600', color: 'var(--green-800)', fontSize: '15px' }}>
-              {schedule?.period || 'Memuat...'}
+              {formatPeriod()}
             </span>
             {weekOffset !== 0 && (
               <button
@@ -145,7 +208,7 @@ export default function Schedule() {
       {/* Schedule Grid */}
       {loading ? (
         <div className="loading-center"><div className="spinner"></div></div>
-      ) : schedule?.days ? (
+      ) : days.length > 0 && allTimes.length > 0 ? (
         <div className="card" style={{ padding: '16px', overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
             <thead>
@@ -153,7 +216,7 @@ export default function Schedule() {
                 <th style={{ padding: '10px 8px', fontSize: '12px', fontWeight: '600', color: 'var(--gray-500)', textAlign: 'left', borderBottom: '2px solid var(--gray-200)', width: '80px' }}>
                   Jam
                 </th>
-                {schedule.days.map((day, i) => (
+                {days.map((day, i) => (
                   <th key={i} style={{
                     padding: '10px 8px', fontSize: '12px', fontWeight: '600',
                     color: 'var(--gray-600)', textAlign: 'center', borderBottom: '2px solid var(--gray-200)'
@@ -167,23 +230,31 @@ export default function Schedule() {
               </tr>
             </thead>
             <tbody>
-              {schedule.days[0]?.slots?.map((_, slotIdx) => (
+              {allTimes.map((time, slotIdx) => (
                 <tr key={slotIdx}>
                   <td style={{ padding: '6px 8px', fontSize: '12px', fontWeight: '500', color: 'var(--gray-600)', borderBottom: '1px solid var(--gray-100)' }}>
-                    {schedule.days[0].slots[slotIdx]?.time}
+                    {time}
                   </td>
-                  {schedule.days.map((day, dayIdx) => {
-                    const slot = day.slots[slotIdx];
-                    if (!slot) return <td key={dayIdx}></td>;
+                  {days.map((day, dayIdx) => {
+                    const slot = day.slots?.find(s => s.start_time === time);
+                    if (!slot) {
+                      return (
+                        <td key={dayIdx} style={{ padding: '3px', borderBottom: '1px solid var(--gray-100)' }}>
+                          <div className="schedule-slot slot-past" style={{ margin: 0, fontSize: '11px', padding: '6px 2px', opacity: 0.4 }}>
+                            —
+                          </div>
+                        </td>
+                      );
+                    }
                     return (
                       <td key={dayIdx} style={{ padding: '3px', borderBottom: '1px solid var(--gray-100)' }}>
                         <div
                           className={`schedule-slot ${getSlotClass(slot.status)}`}
                           onClick={() => handleSlotClick(slot, day.date)}
-                          title={slot.status === 'available' ? 'Klik untuk booking' : slot.status === 'booked' ? 'Sudah dipesan' : 'Diblokir'}
+                          title={getSlotLabel(slot.status)}
                           style={{ margin: 0, fontSize: '11px', padding: '6px 2px' }}
                         >
-                          {slot.time}
+                          {slot.start_time}
                         </div>
                       </td>
                     );

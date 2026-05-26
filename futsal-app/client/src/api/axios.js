@@ -32,4 +32,25 @@ api.interceptors.response.use(
   }
 );
 
+// Download PDF with authentication
+export const downloadPdf = async (bookingId) => {
+  try {
+    const response = await api.get(`/bookings/${bookingId}/pdf`, {
+      responseType: 'blob',
+    });
+    const blob = new Blob([response.data], { type: 'application/pdf' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `bukti-pemesanan-${bookingId}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error('PDF download error:', err);
+    alert('Gagal mengunduh PDF. Pastikan Anda sudah login.');
+  }
+};
+
 export default api;

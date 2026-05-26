@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../../api/axios';
+import api, { downloadPdf } from '../../api/axios';
 import { formatRupiah, formatDateShort, BOOKING_STATUS, PAYMENT_STATUS } from '../../utils/auth';
 
 export default function BookingHistory() {
@@ -110,7 +110,7 @@ export default function BookingHistory() {
                     }}>Detail</button>
                     <button className="btn btn-primary btn-sm" onClick={(e) => {
                       e.stopPropagation();
-                      window.open(`http://127.0.0.1:8000/api/bookings/${booking.id}/pdf`, '_blank');
+                      downloadPdf(booking.id);
                     }}>📄 PDF</button>
                   </div>
                 </div>
