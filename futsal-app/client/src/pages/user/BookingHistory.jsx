@@ -11,8 +11,17 @@ export default function BookingHistory() {
 
   useEffect(() => {
     api.get('/bookings')
-      .then(res => { setBookings(res.data.data || res.data); setLoading(false); })
-      .catch(() => setLoading(false));
+      .then(res => {
+        // Laravel paginate returns { data: [...], current_page, ... }
+        const d = res.data;
+        const list = Array.isArray(d) ? d : (d.data || []);
+        setBookings(list);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error('Fetch booking history error:', err);
+        setLoading(false);
+      });
   }, []);
 
   const filtered = filter === 'all' ? bookings : bookings.filter(b => b.status === filter);

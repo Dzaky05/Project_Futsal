@@ -16,11 +16,16 @@ export default function ManageBookings() {
     if (filter !== 'all') params.status = filter;
     api.get('/admin/bookings', { params })
       .then(res => {
-        const d = res.data.data || res.data;
-        setBookings(Array.isArray(d) ? d : d.data || []);
+        // Handle paginated response from Laravel
+        const d = res.data;
+        const list = Array.isArray(d) ? d : (d.data || []);
+        setBookings(list);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch((err) => {
+        console.error('Fetch bookings error:', err);
+        setLoading(false);
+      });
   };
 
   useEffect(() => { fetchBookings(); }, [filter]);

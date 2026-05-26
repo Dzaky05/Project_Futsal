@@ -206,4 +206,24 @@ class BookingController extends Controller
                 ->get(),
         ]);
     }
+
+    /**
+     * Admin stats endpoint - returns the format expected by AdminDashboard frontend
+     */
+    public function adminStats()
+    {
+        $today = Carbon::today();
+
+        return response()->json([
+            'bookings_today' => Booking::where('booking_date', $today)->count(),
+            'pending_bookings' => Booking::where('status', 'pending')->count(),
+            'pending_payments' => Payment::where('status', 'menunggu_verifikasi')->count(),
+            'revenue_this_month' => Payment::where('status', 'lunas')
+                ->whereMonth('verified_at', $today->month)
+                ->whereYear('verified_at', $today->year)
+                ->sum('amount'),
+            'total_bookings' => Booking::count(),
+            'confirmed_bookings' => Booking::where('status', 'confirmed')->count(),
+        ]);
+    }
 }

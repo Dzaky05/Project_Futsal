@@ -42,8 +42,10 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {
     // Dashboard
     Route::get('/dashboard', [BookingController::class, 'todayStats']);
+    Route::get('/bookings/stats', [BookingController::class, 'adminStats']);
 
     // Manage Bookings
+    Route::get('/bookings', [BookingController::class, 'index']);
     Route::put('/bookings/{id}/status', [BookingController::class, 'updateStatus']);
 
     // Payments
