@@ -60,16 +60,18 @@ Aplikasi web FutsalGo yang dibangun menggunakan stack Laravel (Backend) dan Reac
 
 ---
 
-## ⏳ FITUR YANG BELUM SELESAI / PERLU PENYEMPURNAAN
+## ⚡ FITUR YANG BARU SAJA DITAMBAHKAN / DISESUALIKAN
 
 1. **QRIS Dinamis:**
-   * Saat ini metode pembayaran QRIS hanya menginstruksikan pengguna untuk "menghubungi admin". Belum ada sistem *generate* QR Code statis/dinamis langsung di aplikasi (Payment Gateway seperti Midtrans belum diintegrasikan).
-2. **Notifikasi (Push Notification / Email):**
-   * Aplikasi belum memiliki sistem pengiriman notifikasi email secara otomatis (misalnya ketika booking berhasil, atau ketika admin menolak pembayaran).
-3. **Responsivitas Ekstrem (Mobile Tweaks):**
-   * Walaupun secara keseluruhan sudah berjalan dengan baik, beberapa tabel di mode admin pada perangkat HP dengan layar sangat kecil mungkin perlu di-*scroll* secara horizontal (*overflow-x*).
-4. **Lupa Password:**
-   * Halaman login belum memiliki fitur "Lupa Password / Reset Password".
+   * Fitur QRIS sudah diimplementasikan di frontend dengan `qrcode`. QR Code dihasilkan secara otomatis berdasarkan detail booking (lapangan, tanggal, jam, total).
+2. **Notifikasi Email:**
+   * Backend kini mengirim email otomatis saat booking dibuat (`BookingCreated`) dan saat pembayaran diverifikasi (`PaymentStatusUpdated`).
+   * Email ini sudah tersambung dengan pengiriman di `BookingController` dan `PaymentController`.
+3. **Lupa Password / Reset Password:**
+   * Halaman `ForgotPassword` dan `ResetPassword` sudah ditambahkan di frontend.
+   * Rute backend `POST /forgot-password` dan `POST /reset-password` sudah tersedia di `server/routes/api.php`.
+4. **Penyempurnaan Responsivitas dan UI:**
+   * Desain sekarang sudah lebih konsisten dengan gaya hijau-putih, serta tombol validasi pembayaran dan upload bukti lebih jelas.
 
 ---
-*Laporan ini dihasilkan secara otomatis berdasarkan peninjauan struktur kode pada repositori FutsalGo.*
+*Laporan ini dihasilkan secara otomatis berdasarkan peninjauan struktur kode dan fitur terbaru di repositori FutsalGo.*

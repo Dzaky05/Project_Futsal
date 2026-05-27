@@ -8,12 +8,36 @@ export default function BookingDetail() {
   const { id } = useParams();
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [proofUrl, setProofUrl] = useState(null);
 
   useEffect(() => {
     api.get(`/bookings/${id}`)
       .then(res => { setBooking(res.data.data || res.data); setLoading(false); })
       .catch(() => { setLoading(false); });
   }, [id]);
+
+  useEffect(() => {
+    if (!booking?.payment?.id) {
+      setProofUrl(null);
+      return;
+    }
+
+    let active = true;
+    api.get(`/payments/${booking.payment.id}/proof`, { responseType: 'blob' })
+      .then(res => {
+        if (!active) return;
+        const url = URL.createObjectURL(res.data);
+        setProofUrl(url);
+      })
+      .catch(() => setProofUrl(null));
+
+    return () => {
+      active = false;
+      if (proofUrl) {
+        URL.revokeObjectURL(proofUrl);
+      }
+    };
+  }, [booking]);
 
   if (loading) return <div className="loading-center"><div className="spinner"></div></div>;
   if (!booking) return (
@@ -108,11 +132,11 @@ export default function BookingDetail() {
                   <span style={{ fontWeight: '500' }}>{booking.payment.notes}</span>
                 </div>
               )}
-              {booking.payment.payment_proof && (
+              {booking.payment.payment_proof && proofUrl && (
                 <div style={{ marginTop: '8px' }}>
                   <p style={{ fontSize: '13px', fontWeight: '600', color: 'var(--gray-600)', marginBottom: '8px' }}>Bukti Pembayaran:</p>
                   <img
-                    src={`http://127.0.0.1:8000/api/admin/payments/${booking.payment.id}/proof`}
+                    src={proofUrl}
                     alt="Bukti Pembayaran"
                     style={{ maxWidth: '100%', borderRadius: 'var(--radius-md)', border: '1px solid var(--gray-200)' }}
                     onError={e => { e.target.style.display = 'none'; }}

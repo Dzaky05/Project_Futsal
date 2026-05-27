@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import QRCode from 'qrcode';
 import api, { downloadPdf } from '../../api/axios';
 import { formatRupiah, PAYMENT_METHODS } from '../../utils/auth';
 import Modal from '../../components/Modal';
@@ -28,6 +29,8 @@ export default function BookingPayment() {
   });
   const [proofFile, setProofFile] = useState(null);
   const [proofPreview, setProofPreview] = useState(null);
+  const [qrisImage, setQrisImage] = useState(null);
+  const [qrisPayload, setQrisPayload] = useState('');
 
   useEffect(() => {
     if (fieldId) {
@@ -46,6 +49,19 @@ export default function BookingPayment() {
 
   const duration = calcDuration();
   const totalPrice = field ? duration * Number(field.price_per_hour) : 0;
+
+  useEffect(() => {
+    if (formData.payment_method === 'qris' && field && formData.booking_date && formData.start_time && formData.end_time) {
+      const payload = `FUTSALGO|LAPANGAN:${field.name}|TANGGAL:${formData.booking_date}|WAKTU:${formData.start_time}-${formData.end_time}|JUMLAH:${Math.round(totalPrice)}`;
+      setQrisPayload(payload);
+      QRCode.toDataURL(payload, { width: 260, margin: 2 })
+        .then(setQrisImage)
+        .catch(() => setQrisImage(null));
+    } else {
+      setQrisImage(null);
+      setQrisPayload('');
+    }
+  }, [formData.payment_method, field, formData.booking_date, formData.start_time, formData.end_time, totalPrice]);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -240,16 +256,25 @@ export default function BookingPayment() {
                     Scan QR Code untuk pembayaran:
                   </p>
                   <div style={{
-                    width: '180px', height: '180px', margin: '0 auto', background: 'white',
-                    borderRadius: '12px', border: '2px solid var(--green-200)',
+                    width: '220px', height: '220px', margin: '0 auto', background: 'white',
+                    borderRadius: '18px', border: '2px solid var(--green-200)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '60px', padding: '16px'
+                    padding: '16px'
                   }}>
-                    📱
+                    {qrisImage ? (
+                      <img src={qrisImage} alt="QRIS" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                    ) : (
+                      <span style={{ fontSize: '48px' }}>📱</span>
+                    )}
                   </div>
-                  <p style={{ fontSize: '11px', color: 'var(--gray-500)', marginTop: '8px' }}>
-                    Hubungi admin untuk mendapatkan QR Code pembayaran
+                  <p style={{ fontSize: '12px', color: 'var(--gray-600)', marginTop: '12px' }}>
+                    QR Code akan dihasilkan otomatis dari detail booking. Pastikan scan dan unggah bukti pembayaran.
                   </p>
+                  {qrisPayload && (
+                    <div style={{ marginTop: '12px', padding: '12px', borderRadius: '12px', background: 'rgba(245, 255, 244, 0.85)', fontSize: '12px', color: 'var(--gray-700)', wordBreak: 'break-word' }}>
+                      <strong>Kode QRIS:</strong><br />{qrisPayload}
+                    </div>
+                  )}
                 </div>
               )}
 

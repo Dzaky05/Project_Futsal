@@ -12,6 +12,8 @@ import Schedule from './pages/user/Schedule';
 import BookingPayment from './pages/user/BookingPayment';
 import BookingHistory from './pages/user/BookingHistory';
 import BookingDetail from './pages/user/BookingDetail';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 // Admin Pages
 import AdminLogin from './pages/admin/AdminLogin';
@@ -372,7 +374,7 @@ function FutsalLogin() {
           </p>
 
           {mode === "login" && (
-            <div style={{ textAlign: "center", marginTop: "12px" }}>
+            <div style={{ textAlign: "center", marginTop: "12px", display: 'grid', gap: '10px' }}>
               <button
                 onClick={() => window.location.href = '/admin/login'}
                 style={{
@@ -382,6 +384,16 @@ function FutsalLogin() {
                 }}
               >
                 🛡️ Login sebagai Admin
+              </button>
+              <button
+                onClick={() => window.location.href = '/forgot-password'}
+                style={{
+                  background: "none", border: "none",
+                  color: "#16a34a", fontSize: "11px",
+                  cursor: "pointer", fontWeight: "500"
+                }}
+              >
+                🔒 Lupa Password?
               </button>
             </div>
           )}
@@ -404,6 +416,8 @@ export default function App() {
         {/* Login / Register */}
         <Route path="/" element={<FutsalLogin />} />
         <Route path="/login" element={<FutsalLogin />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
 
         {/* User Routes (Protected) */}
         <Route path="/schedule" element={

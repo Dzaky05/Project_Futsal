@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\PaymentStatusUpdated;
 use App\Models\Payment;
 use App\Models\Booking;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 
@@ -50,6 +52,12 @@ class PaymentController extends Controller
         // If approved, auto-confirm booking
         if ($request->status === 'lunas') {
             $payment->booking->update(['status' => 'confirmed']);
+        }
+
+        try {
+            Mail::to($payment->user->email)->send(new PaymentStatusUpdated($payment));
+        } catch (\Exception $e) {
+            // Log or ignore mail failures so admin workflow is not blocked
         }
 
         return response()->json([

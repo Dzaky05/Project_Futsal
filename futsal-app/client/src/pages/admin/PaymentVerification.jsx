@@ -10,6 +10,7 @@ export default function PaymentVerification() {
   const [selected, setSelected] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [rejectNotes, setRejectNotes] = useState('');
+  const [proofUrl, setProofUrl] = useState(null);
 
   const fetchPayments = () => {
     setLoading(true);
@@ -25,6 +26,29 @@ export default function PaymentVerification() {
   };
 
   useEffect(() => { fetchPayments(); }, [filter]);
+
+  useEffect(() => {
+    if (!showModal || !selected) {
+      setProofUrl(null);
+      return;
+    }
+
+    let active = true;
+    api.get(`/admin/payments/${selected.id}/proof`, { responseType: 'blob' })
+      .then(res => {
+        if (!active) return;
+        const url = URL.createObjectURL(res.data);
+        setProofUrl(url);
+      })
+      .catch(() => { if (active) setProofUrl(null); });
+
+    return () => {
+      active = false;
+      if (proofUrl) {
+        URL.revokeObjectURL(proofUrl);
+      }
+    };
+  }, [showModal, selected]);
 
   const verifyPayment = async (id, status) => {
     const action = status === 'lunas' ? 'menyetujui' : 'menolak';
@@ -131,11 +155,11 @@ export default function PaymentVerification() {
             </div>
 
             {/* Payment Proof Image */}
-            {selected.payment_proof && (
+            {selected.payment_proof && proofUrl && (
               <div style={{ marginBottom: '16px' }}>
                 <p style={{ fontSize: '13px', fontWeight: '600', marginBottom: '8px' }}>📎 Bukti Pembayaran:</p>
                 <img
-                  src={`http://127.0.0.1:8000/api/payments/${selected.id}/proof`}
+                  src={proofUrl}
                   alt="Bukti Pembayaran"
                   style={{ width: '100%', borderRadius: 'var(--radius-md)', border: '1px solid var(--gray-200)' }}
                   onError={e => { e.target.src = ''; e.target.alt = 'Gagal memuat gambar'; }}

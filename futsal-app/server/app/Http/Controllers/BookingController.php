@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\BookingCreated;
 use App\Models\Booking;
 use App\Models\Payment;
 use App\Models\Field;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 
@@ -92,6 +94,12 @@ class BookingController extends Controller
             DB::commit();
 
             $booking->load(['field', 'user', 'payment']);
+
+            try {
+                Mail::to($booking->user->email)->send(new BookingCreated($booking));
+            } catch (\Exception $e) {
+                // Email failure should not block booking creation
+            }
 
             return response()->json([
                 'message' => 'Pemesanan berhasil dibuat! Menunggu verifikasi admin.',
