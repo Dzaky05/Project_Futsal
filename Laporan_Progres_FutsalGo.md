@@ -14,6 +14,7 @@ Aplikasi web FutsalGo yang dibangun menggunakan stack Laravel (Backend) dan Reac
   * Sistem *color-coding* sudah berjalan: Tersedia (Hijau), Sudah Dipesan (Abu-abu), Diblokir (Oranye).
   * Bisa berpindah minggu (Minggu Lalu / Minggu Depan).
   * Pemilihan lapangan yang berbeda melalui tab (Lapangan A, B, dsb).
+  * **Tampilan Gambar Lapangan:** Setiap lapangan menampilkan gambar/foto lapangan di halaman jadwal pengguna untuk referensi visual yang lebih baik.
 * **Form Pemesanan & Pembayaran Terintegrasi (Booking + Payment):**
   * Formulir auto-fill untuk nama, tanggal, lapangan, dan jam mulai.
   * Perhitungan harga otomatis berdasarkan durasi.
@@ -61,15 +62,13 @@ Aplikasi web FutsalGo yang dibangun menggunakan stack Laravel (Backend) dan Reac
 
 ## ⏳ FITUR YANG BELUM SELESAI / PERLU PENYEMPURNAAN
 
-1. **Tampilan Gambar Lapangan di Sisi Pengguna:**
-   * Halaman jadwal pengguna belum menampilkan gambar foto lapangan (hanya nama dan deskripsi).
-2. **QRIS Dinamis:**
+1. **QRIS Dinamis:**
    * Saat ini metode pembayaran QRIS hanya menginstruksikan pengguna untuk "menghubungi admin". Belum ada sistem *generate* QR Code statis/dinamis langsung di aplikasi (Payment Gateway seperti Midtrans belum diintegrasikan).
-3. **Notifikasi (Push Notification / Email):**
+2. **Notifikasi (Push Notification / Email):**
    * Aplikasi belum memiliki sistem pengiriman notifikasi email secara otomatis (misalnya ketika booking berhasil, atau ketika admin menolak pembayaran).
-4. **Responsivitas Ekstrem (Mobile Tweaks):**
+3. **Responsivitas Ekstrem (Mobile Tweaks):**
    * Walaupun secara keseluruhan sudah berjalan dengan baik, beberapa tabel di mode admin pada perangkat HP dengan layar sangat kecil mungkin perlu di-*scroll* secara horizontal (*overflow-x*).
-5. **Lupa Password:**
+4. **Lupa Password:**
    * Halaman login belum memiliki fitur "Lupa Password / Reset Password".
 
 ---
