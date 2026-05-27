@@ -65,7 +65,7 @@ Aplikasi web FutsalGo yang dibangun menggunakan stack Laravel (Backend) dan Reac
 1. **QRIS Dinamis:**
    * Fitur QRIS sudah diimplementasikan di frontend dengan `qrcode`. QR Code dihasilkan secara otomatis berdasarkan detail booking (lapangan, tanggal, jam, total).
 2. **Notifikasi Email:**
-   * Backend kini mengirim email otomatis saat booking dibuat (`BookingCreated`) dan saat pembayaran diverifikasi (`PaymentStatusUpdated`).
+   * Backend sekarang mengirim email otomatis saat booking dibuat (`BookingCreated`) dan saat pembayaran diverifikasi (`PaymentStatusUpdated`).
    * Email ini sudah tersambung dengan pengiriman di `BookingController` dan `PaymentController`.
 3. **Lupa Password / Reset Password:**
    * Halaman `ForgotPassword` dan `ResetPassword` sudah ditambahkan di frontend.
