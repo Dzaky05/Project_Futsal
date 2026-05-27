@@ -60,7 +60,7 @@ Aplikasi web FutsalGo yang dibangun menggunakan stack Laravel (Backend) dan Reac
 
 ---
 
-## ⚡ FITUR YANG BARU SAJA DITAMBAHKAN / DISESUALIKAN
+## ⚡ FITUR YANG BARU SAJA DITAMBAHKAN / DISESUAIKAN
 
 1. **QRIS Dinamis:**
    * Fitur QRIS sudah diimplementasikan di frontend dengan `qrcode`. QR Code dihasilkan secara otomatis berdasarkan detail booking (lapangan, tanggal, jam, total).
