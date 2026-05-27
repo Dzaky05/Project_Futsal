@@ -140,6 +140,15 @@ export default function Schedule() {
           marginBottom: '20px', background: 'linear-gradient(135deg, var(--green-800) 0%, var(--green-600) 100%)',
           color: 'white', border: 'none', display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap'
         }}>
+          {currentField.image && (
+            <div style={{ width: '220px', minWidth: '220px', maxHeight: '160px', overflow: 'hidden', borderRadius: '16px', boxShadow: '0 8px 30px rgba(0,0,0,0.15)' }}>
+              <img
+                src={`http://127.0.0.1:8000/storage/${currentField.image}`}
+                alt={currentField.name}
+                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+              />
+            </div>
+          )}
           <div style={{ flex: 1, minWidth: '200px' }}>
             <h3 style={{ fontFamily: "'Poppins', sans-serif", fontSize: '18px', marginBottom: '6px' }}>
               ⚽ {currentField.name}

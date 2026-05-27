@@ -13,6 +13,8 @@ export default function ManageFields() {
   const [formData, setFormData] = useState({
     name: '', description: '', price_per_hour: '', facilities: '', is_active: true
   });
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [selectedImageName, setSelectedImageName] = useState('');
 
   const fetchFields = () => {
     setLoading(true);
@@ -33,11 +35,24 @@ export default function ManageFields() {
         facilities: Array.isArray(JSON.parse(field.facilities || '[]')) ? JSON.parse(field.facilities || '[]').join(', ') : '',
         is_active: field.is_active !== false
       });
+      setSelectedImage(null);
+      setSelectedImageName('');
     } else {
       setEditing(null);
       setFormData({ name: '', description: '', price_per_hour: '', facilities: '', is_active: true });
+      setSelectedImage(null);
+      setSelectedImageName('');
     }
     setShowForm(true);
+  };
+
+  const uploadFieldImage = async (fieldId) => {
+    if (!selectedImage) return;
+    const imageForm = new FormData();
+    imageForm.append('image', selectedImage);
+    await api.post(`/admin/fields/${fieldId}/image`, imageForm, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -49,10 +64,14 @@ export default function ManageFields() {
     try {
       if (editing) {
         await api.put(`/admin/fields/${editing}`, payload);
+        await uploadFieldImage(editing);
       } else {
-        await api.post('/admin/fields', payload);
+        const res = await api.post('/admin/fields', payload);
+        await uploadFieldImage(res.data.field.id);
       }
       setShowForm(false);
+      setSelectedImage(null);
+      setSelectedImageName('');
       fetchFields();
     } catch (err) {
       alert(err.response?.data?.message || 'Gagal menyimpan');
@@ -133,6 +152,12 @@ export default function ManageFields() {
                   </div>
                 </div>
                 <div style={{ padding: '16px' }}>
+                  {field.image && (
+                    <div style={{ marginBottom: '14px' }}>
+                      <img src={`http://127.0.0.1:8000/storage/${field.image}`} alt={field.name}
+                        style={{ width: '100%', maxHeight: '180px', objectFit: 'cover', borderRadius: '12px' }} />
+                    </div>
+                  )}
                   <div style={{ fontSize: '22px', fontWeight: '700', color: 'var(--green-700)', fontFamily: "'Poppins', sans-serif", marginBottom: '10px' }}>
                     {formatRupiah(field.price_per_hour)}<span style={{ fontSize: '13px', fontWeight: '400', color: 'var(--gray-400)' }}>/jam</span>
                   </div>
@@ -179,6 +204,25 @@ export default function ManageFields() {
             <label className="form-label">Fasilitas (pisahkan koma)</label>
             <input className="form-input" placeholder="WiFi, Parkir, Kamar Mandi" value={formData.facilities}
               onChange={e => setFormData({ ...formData, facilities: e.target.value })} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Gambar Lapangan</label>
+            <input type="file" accept="image/*" className="form-input" style={{ padding: '10px 12px' }}
+              onChange={e => {
+                const file = e.target.files?.[0] || null;
+                setSelectedImage(file);
+                setSelectedImageName(file ? file.name : '');
+              }} />
+            {selectedImageName && (
+              <div style={{ marginTop: '8px', color: 'var(--gray-600)', fontSize: '13px' }}>
+                Terpilih: {selectedImageName}
+              </div>
+            )}
+            {editing && !selectedImageName && (
+              <div style={{ marginTop: '8px', color: 'var(--gray-500)', fontSize: '13px' }}>
+                Pilih gambar untuk mengganti gambar lapangan saat ini.
+              </div>
+            )}
           </div>
           <div className="form-group">
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
