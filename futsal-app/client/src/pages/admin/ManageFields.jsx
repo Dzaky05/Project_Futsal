@@ -29,10 +29,13 @@ export default function ManageFields() {
   const openForm = (field = null) => {
     if (field) {
       setEditing(field.id);
+      const facilitiesArray = Array.isArray(field.facilities) 
+        ? field.facilities 
+        : JSON.parse(field.facilities || '[]');
       setFormData({
         name: field.name, description: field.description || '',
         price_per_hour: field.price_per_hour,
-        facilities: Array.isArray(JSON.parse(field.facilities || '[]')) ? JSON.parse(field.facilities || '[]').join(', ') : '',
+        facilities: facilitiesArray.join(', '),
         is_active: field.is_active !== false
       });
       setSelectedImage(null);
