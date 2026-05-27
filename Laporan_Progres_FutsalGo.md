@@ -50,6 +50,7 @@ Aplikasi web FutsalGo yang dibangun menggunakan stack Laravel (Backend) dan Reac
   * CRUD Lapangan (Tambah, Edit, Nonaktifkan Lapangan).
   * Mengatur harga per jam dan fasilitas lapangan.
   * Mengatur jam operasional secara spesifik per hari untuk setiap lapangan.
+  * **Upload Gambar Lapangan:** Form input untuk mengunggah foto/gambar lapangan sudah ditambahkan di Frontend React dan terintegrasi dengan endpoint API Laravel. Admin dapat memilih dan mengunggah gambar untuk setiap lapangan, dan gambar akan ditampilkan di kartu lapangan.
 * **Laporan Keuangan (Financial Report):**
   * Menampilkan diagram/chart interaktif (menggunakan library Recharts) berdasarkan pendapatan harian.
   * Pie chart untuk sebaran metode pembayaran yang digunakan.
@@ -60,17 +61,15 @@ Aplikasi web FutsalGo yang dibangun menggunakan stack Laravel (Backend) dan Reac
 
 ## ⏳ FITUR YANG BELUM SELESAI / PERLU PENYEMPURNAAN
 
-1. **Upload Gambar Lapangan dari Sisi Admin:**
-   * Di menu "Kelola Lapangan" (Admin), *form input* untuk mengunggah foto/gambar lapangan (*image upload*) belum ditambahkan di sisi Frontend React (meskipun endpoint API di Laravel sudah mendukung). Saat ini hanya menyimpan nama dan deskripsi lapangan.
-2. **Tampilan Gambar Lapangan di Sisi Pengguna:**
+1. **Tampilan Gambar Lapangan di Sisi Pengguna:**
    * Halaman jadwal pengguna belum menampilkan gambar foto lapangan (hanya nama dan deskripsi).
-3. **QRIS Dinamis:**
+2. **QRIS Dinamis:**
    * Saat ini metode pembayaran QRIS hanya menginstruksikan pengguna untuk "menghubungi admin". Belum ada sistem *generate* QR Code statis/dinamis langsung di aplikasi (Payment Gateway seperti Midtrans belum diintegrasikan).
-4. **Notifikasi (Push Notification / Email):**
+3. **Notifikasi (Push Notification / Email):**
    * Aplikasi belum memiliki sistem pengiriman notifikasi email secara otomatis (misalnya ketika booking berhasil, atau ketika admin menolak pembayaran).
-5. **Responsivitas Ekstrem (Mobile Tweaks):**
+4. **Responsivitas Ekstrem (Mobile Tweaks):**
    * Walaupun secara keseluruhan sudah berjalan dengan baik, beberapa tabel di mode admin pada perangkat HP dengan layar sangat kecil mungkin perlu di-*scroll* secara horizontal (*overflow-x*).
-6. **Lupa Password:**
+5. **Lupa Password:**
    * Halaman login belum memiliki fitur "Lupa Password / Reset Password".
 
 ---

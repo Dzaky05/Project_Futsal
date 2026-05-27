@@ -57,10 +57,16 @@ export default function ManageFields() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const facilitiesArray = formData.facilities
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
+
     const payload = {
       ...formData,
-      facilities: JSON.stringify(formData.facilities.split(',').map(s => s.trim()).filter(Boolean))
+      facilities: facilitiesArray.length ? facilitiesArray : null,
     };
+
     try {
       if (editing) {
         await api.put(`/admin/fields/${editing}`, payload);
