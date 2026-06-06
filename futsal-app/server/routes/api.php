@@ -71,6 +71,9 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
     Route::post('/blocked-slots', [BlockedSlotController::class, 'store']);
     Route::delete('/blocked-slots/{id}', [BlockedSlotController::class, 'destroy']);
 
+    // Manage Schedule Grid (Delete by Date/Time)
+    Route::delete('/schedule/delete-slot', [ScheduleController::class, 'deleteSlot']);
+
     // Reports
     Route::get('/reports/monthly', [ReportController::class, 'monthly']);
     Route::get('/reports/export-pdf', [ReportController::class, 'exportPdf']);

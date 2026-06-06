@@ -66,6 +66,7 @@ export default function AdminDashboard() {
           <button className="btn btn-primary" onClick={() => navigate('/admin/payments')}>
             💳 Verifikasi Pembayaran {stats?.pending_payments > 0 && `(${stats.pending_payments})`}
           </button>
+          <button className="btn btn-primary" onClick={() => navigate('/admin/schedule')}>📅 Kelola Jadwal</button>
           <button className="btn btn-outline" onClick={() => navigate('/admin/bookings')}>📋 Kelola Booking</button>
           <button className="btn btn-outline" onClick={() => navigate('/admin/block-slots')}>🚫 Blokir Jadwal</button>
           <button className="btn btn-outline" onClick={() => navigate('/admin/reports')}>📈 Laporan</button>

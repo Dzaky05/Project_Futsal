@@ -138,10 +138,11 @@ export default function Schedule() {
       {currentField && (
         <div className="card" style={{
           marginBottom: '20px', background: 'linear-gradient(135deg, var(--green-800) 0%, var(--green-600) 100%)',
-          color: 'white', border: 'none', display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap'
+          color: 'white', border: 'none', display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap',
+          padding: '16px'
         }}>
           {currentField.image && (
-            <div style={{ width: '220px', minWidth: '220px', maxHeight: '160px', overflow: 'hidden', borderRadius: '16px', boxShadow: '0 8px 30px rgba(0,0,0,0.15)' }}>
+            <div style={{ width: '140px', minWidth: '100px', maxHeight: '100px', overflow: 'hidden', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.15)' }}>
               <img
                 src={`http://127.0.0.1:8000/storage/${currentField.image}`}
                 alt={currentField.name}
@@ -149,19 +150,19 @@ export default function Schedule() {
               />
             </div>
           )}
-          <div style={{ flex: 1, minWidth: '200px' }}>
-            <h3 style={{ fontFamily: "'Poppins', sans-serif", fontSize: '18px', marginBottom: '6px' }}>
+            <div style={{ flex: 1, minWidth: '150px' }}>
+            <h3 style={{ fontFamily: "'Poppins', sans-serif", fontSize: '16px', marginBottom: '4px' }}>
               ⚽ {currentField.name}
             </h3>
-            <p style={{ opacity: 0.85, fontSize: '13px', marginBottom: '8px' }}>
+            <p style={{ opacity: 0.85, fontSize: '12px', marginBottom: '6px' }}>
               {currentField.description || 'Lapangan futsal berkualitas'}
             </p>
-            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '13px', opacity: 0.9 }}>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '12px', opacity: 0.9 }}>
                 💰 Rp {Number(currentField.price_per_hour).toLocaleString('id-ID')}/jam
               </span>
               {getFacilities(currentField).map((f, i) => (
-                <span key={i} style={{ fontSize: '12px', opacity: 0.8, background: 'rgba(255,255,255,0.15)', padding: '2px 10px', borderRadius: '12px' }}>
+                <span key={i} style={{ fontSize: '11px', opacity: 0.8, background: 'rgba(255,255,255,0.15)', padding: '2px 8px', borderRadius: '10px' }}>
                   {f}
                 </span>
               ))}
@@ -171,29 +172,39 @@ export default function Schedule() {
       )}
 
       {/* Week Navigation */}
-      <div className="card" style={{ marginBottom: '20px', padding: '16px 20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <button className="btn btn-outline btn-sm" onClick={() => setWeekOffset(w => w - 1)}>
-            ← Minggu Lalu
+      <div className="card" style={{ marginBottom: '20px', padding: '12px 14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+          <button
+            className="btn btn-outline btn-sm"
+            onClick={() => setWeekOffset(w => w - 1)}
+            style={{ padding: '6px 10px', fontSize: '18px', minWidth: '40px', lineHeight: 1 }}
+            title="Minggu Lalu"
+          >
+            ←
           </button>
-          <div style={{ textAlign: 'center' }}>
-            <span style={{ fontWeight: '600', color: 'var(--green-800)', fontSize: '15px' }}>
+          <div style={{ textAlign: 'center', flex: 1, minWidth: 0 }}>
+            <span style={{ fontWeight: '600', color: 'var(--green-800)', fontSize: '13px', lineHeight: '1.3', display: 'block' }}>
               {formatPeriod()}
             </span>
             {weekOffset !== 0 && (
               <button
                 onClick={() => setWeekOffset(0)}
                 style={{
-                  display: 'block', margin: '4px auto 0', background: 'none', border: 'none',
-                  color: 'var(--green-600)', cursor: 'pointer', fontSize: '12px', fontWeight: '500'
+                  display: 'inline-block', marginTop: '4px', background: 'none', border: 'none',
+                  color: 'var(--green-600)', cursor: 'pointer', fontSize: '11px', fontWeight: '500'
                 }}
               >
                 ↻ Minggu Ini
               </button>
             )}
           </div>
-          <button className="btn btn-outline btn-sm" onClick={() => setWeekOffset(w => w + 1)}>
-            Minggu Depan →
+          <button
+            className="btn btn-outline btn-sm"
+            onClick={() => setWeekOffset(w => w + 1)}
+            style={{ padding: '6px 10px', fontSize: '18px', minWidth: '40px', lineHeight: 1 }}
+            title="Minggu Depan"
+          >
+            →
           </button>
         </div>
       </div>
@@ -219,20 +230,20 @@ export default function Schedule() {
         <div className="loading-center"><div className="spinner"></div></div>
       ) : days.length > 0 && allTimes.length > 0 ? (
         <div className="card" style={{ padding: '16px', overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '750px' }}>
             <thead>
               <tr>
-                <th style={{ padding: '10px 8px', fontSize: '12px', fontWeight: '600', color: 'var(--gray-500)', textAlign: 'left', borderBottom: '2px solid var(--gray-200)', width: '80px' }}>
+                <th style={{ padding: '12px 8px', fontSize: '13px', fontWeight: '600', color: 'var(--gray-500)', textAlign: 'left', borderBottom: '2px solid var(--gray-200)', width: '60px' }}>
                   Jam
                 </th>
                 {days.map((day, i) => (
                   <th key={i} style={{
-                    padding: '10px 8px', fontSize: '12px', fontWeight: '600',
+                    padding: '12px 6px', fontSize: '13px', fontWeight: '600',
                     color: 'var(--gray-600)', textAlign: 'center', borderBottom: '2px solid var(--gray-200)'
                   }}>
                     <div>{dayNames[i] || day.day_name}</div>
                     <div style={{ fontSize: '11px', fontWeight: '400', color: 'var(--gray-400)', marginTop: '2px' }}>
-                      {day.date}
+                      {day.date?.slice(5)}
                     </div>
                   </th>
                 ))}
@@ -241,27 +252,27 @@ export default function Schedule() {
             <tbody>
               {allTimes.map((time, slotIdx) => (
                 <tr key={slotIdx}>
-                  <td style={{ padding: '6px 8px', fontSize: '12px', fontWeight: '500', color: 'var(--gray-600)', borderBottom: '1px solid var(--gray-100)' }}>
+                  <td style={{ padding: '8px 6px', fontSize: '13px', fontWeight: '500', color: 'var(--gray-600)', borderBottom: '1px solid var(--gray-100)' }}>
                     {time}
                   </td>
                   {days.map((day, dayIdx) => {
                     const slot = day.slots?.find(s => s.start_time === time);
                     if (!slot) {
                       return (
-                        <td key={dayIdx} style={{ padding: '3px', borderBottom: '1px solid var(--gray-100)' }}>
-                          <div className="schedule-slot slot-past" style={{ margin: 0, fontSize: '11px', padding: '6px 2px', opacity: 0.4 }}>
+                        <td key={dayIdx} style={{ padding: '4px', borderBottom: '1px solid var(--gray-100)' }}>
+                          <div className="schedule-slot slot-past" style={{ margin: 0, fontSize: '12px', padding: '8px 2px', opacity: 0.4 }}>
                             —
                           </div>
                         </td>
                       );
                     }
                     return (
-                      <td key={dayIdx} style={{ padding: '3px', borderBottom: '1px solid var(--gray-100)' }}>
+                      <td key={dayIdx} style={{ padding: '4px', borderBottom: '1px solid var(--gray-100)' }}>
                         <div
                           className={`schedule-slot ${getSlotClass(slot.status)}`}
                           onClick={() => handleSlotClick(slot, day.date)}
                           title={getSlotLabel(slot.status)}
-                          style={{ margin: 0, fontSize: '11px', padding: '6px 2px' }}
+                          style={{ margin: 0, fontSize: '12px', padding: '10px 4px', fontWeight: '600' }}
                         >
                           {slot.start_time}
                         </div>

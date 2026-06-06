@@ -38,8 +38,7 @@ class ScheduleController extends Controller
         // Build schedule grid
         $schedule = [];
         for ($date = $startDate->copy(); $date->lte($endDate); $date->addDay()) {
-            $dayOfWeek = $date->dayOfWeek;
-            $opHours = $field->operationalHours->firstWhere('day_of_week', $dayOfWeek);
+            $opHours = $field->operationalHours->firstWhere('date', $date->format('Y-m-d'));
 
             if (!$opHours || !$opHours->is_open) {
                 $schedule[] = [
@@ -128,11 +127,9 @@ class ScheduleController extends Controller
 
         $fieldId = $request->field_id;
         $date = Carbon::parse($request->date);
-        $dayOfWeek = $date->dayOfWeek;
-
         $field = Field::findOrFail($fieldId);
         $opHours = OperationalHour::where('field_id', $fieldId)
-            ->where('day_of_week', $dayOfWeek)
+            ->where('date', $date->format('Y-m-d'))
             ->first();
 
         if (!$opHours || !$opHours->is_open) {
@@ -186,5 +183,45 @@ class ScheduleController extends Controller
             'date' => $date->format('Y-m-d'),
             'slots' => $slots,
         ]);
+    }
+
+    public function deleteSlot(Request $request)
+    {
+        $request->validate([
+            'field_id' => 'required|exists:fields,id',
+            'date' => 'required|date',
+            'start_time' => 'required|date_format:H:i',
+            'type' => 'required|in:booked,blocked',
+        ]);
+
+        $dateStr = Carbon::parse($request->date)->format('Y-m-d');
+        $startTime = Carbon::parse($request->start_time)->format('H:i:s');
+
+        if ($request->type === 'blocked') {
+            $deleted = BlockedSlot::where('field_id', $request->field_id)
+                ->where('date', $dateStr)
+                ->where('start_time', '<=', $startTime)
+                ->where('end_time', '>', $startTime)
+                ->delete();
+                
+            if ($deleted) {
+                return response()->json(['message' => 'Blokir slot berhasil dihapus!']);
+            }
+        } elseif ($request->type === 'booked') {
+            // Find bookings that overlap with this time
+            $booking = Booking::where('field_id', $request->field_id)
+                ->where('booking_date', $dateStr)
+                ->where('start_time', '<=', $startTime)
+                ->where('end_time', '>', $startTime)
+                ->first();
+                
+            if ($booking) {
+                $booking->status = 'cancelled';
+                $booking->save();
+                return response()->json(['message' => 'Booking berhasil dibatalkan!']);
+            }
+        }
+
+        return response()->json(['message' => 'Slot tidak ditemukan.'], 404);
     }
 }

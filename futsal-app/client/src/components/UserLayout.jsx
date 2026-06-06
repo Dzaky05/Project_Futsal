@@ -85,7 +85,7 @@ export default function UserLayout({ children }) {
             }}>
               {user?.name?.charAt(0)?.toUpperCase() || 'U'}
             </div>
-            <span style={{ maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span className="profile-name" style={{ maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {user?.name || 'User'}
             </span>
             <span style={{ fontSize: '10px' }}>▼</span>

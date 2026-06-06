@@ -22,6 +22,7 @@ import ManageBookings from './pages/admin/ManageBookings';
 import PaymentVerification from './pages/admin/PaymentVerification';
 import BlockSlots from './pages/admin/BlockSlots';
 import ManageFields from './pages/admin/ManageFields';
+import ManageSchedule from './pages/admin/ManageSchedule';
 import FinancialReport from './pages/admin/FinancialReport';
 
 axios.defaults.withCredentials = true;
@@ -466,6 +467,11 @@ export default function App() {
         <Route path="/admin/block-slots" element={
           <AdminRoute>
             <AdminLayout><BlockSlots /></AdminLayout>
+          </AdminRoute>
+        } />
+        <Route path="/admin/schedule" element={
+          <AdminRoute>
+            <AdminLayout><ManageSchedule /></AdminLayout>
           </AdminRoute>
         } />
         <Route path="/admin/reports" element={

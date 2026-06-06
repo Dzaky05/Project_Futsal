@@ -62,16 +62,36 @@ Aplikasi web FutsalGo yang dibangun menggunakan stack Laravel (Backend) dan Reac
 
 ## ⚡ FITUR YANG BARU SAJA DITAMBAHKAN / DISESUAIKAN
 
-1. **QRIS Dinamis:**
-   * Fitur QRIS sudah diimplementasikan di frontend dengan `qrcode`. QR Code dihasilkan secara otomatis berdasarkan detail booking (lapangan, tanggal, jam, total).
-2. **Notifikasi Email:**
-   * Backend sekarang mengirim email otomatis saat booking dibuat (`BookingCreated`) dan saat pembayaran diverifikasi (`PaymentStatusUpdated`).
-   * Email ini sudah tersambung dengan pengiriman di `BookingController` dan `PaymentController`.
-3. **Lupa Password / Reset Password:**
-   * Halaman `ForgotPassword` dan `ResetPassword` sudah ditambahkan di frontend.
-   * Rute backend `POST /forgot-password` dan `POST /reset-password` sudah tersedia di `server/routes/api.php`.
-4. **Penyempurnaan Responsivitas dan UI:**
-   * Desain sekarang sudah lebih konsisten dengan gaya hijau-putih, serta tombol validasi pembayaran dan upload bukti lebih jelas.
+1. **Kelola Jadwal Lanjutan (Admin):**
+   * Perubahan konsep dari *global setting* menjadi per minggu (spesifik tanggal).
+   * Fitur klik tabel jadwal untuk menghapus slot pesanan (Booking) atau Blokir Slot.
+2. **Penyempurnaan Fitur Blokir & UI Admin:**
+   * Validasi *frontend*: Muncul alert peringatan jika admin mencoba memblokir jadwal pada tanggal yang sudah lewat, mencegah error server.
+3. **Optimasi Tampilan Mobile (Mobile-Friendly UI):**
+   * **Grid Jadwal Lebih Lega:** Memperbesar ukuran sel tabel (*slots*), font, dan padding pada tabel jadwal (baik di sisi **Admin** maupun **User**) agar lebih mudah di-klik (*tap-friendly*) dan memaksimalkan penggunaan layar (*no empty space*).
+   * **Navigasi (*Header*) Anti-Bentrok:** Menyesuaikan *header* profil pengguna (menyembunyikan nama panjang pada layar yang sangat kecil, menyisakan *icon* inisial) agar tidak tumpang tindih (*overlap*) dengan logo FutsalGo.
+   * Desain navigasi minggu, form pemesanan, dan riwayat dibuat lebih *compact* untuk smartphone.
+4. **QRIS Dinamis:**
+   * Fitur QRIS diimplementasikan dengan `qrcode`. QR Code dihasilkan secara otomatis berdasarkan detail booking.
+5. **Notifikasi Email:**
+   * Backend mengirim email otomatis saat booking dibuat (`BookingCreated`) dan diverifikasi (`PaymentStatusUpdated`).
+6. **Lupa / Reset Password:**
+   * Halaman dan API untuk *Forgot Password* telah diimplementasikan.
 
 ---
-*Laporan ini dihasilkan secara otomatis berdasarkan peninjauan struktur kode dan fitur terbaru di repositori FutsalGo.*
+
+## ⏳ FITUR YANG MASIH HARUS DIPERBAIKI / DITAMBAHKAN (TODO)
+
+1. **Integrasi Payment Gateway Otomatis (Opsional):**
+   * Beralih dari verifikasi manual/transfer ke *Payment Gateway* seperti Midtrans agar status *booking* langsung "Confirmed" seketika pelanggan membayar.
+2. **Manajemen Profil Pengguna:**
+   * Halaman khusus bagi pelanggan untuk mengubah data diri dan *password*.
+3. **Notifikasi Real-time & Pengingat (Reminder):**
+   * Mengirim notifikasi (misal WhatsApp atau in-app) beberapa jam sebelum waktu sewa lapangan dimulai.
+4. **Sistem Deposit atau DP:**
+   * Menambahkan fitur pembayaran sebagian (DP) untuk mengamankan slot, dan pelunasan sisanya secara tunai di lokasi.
+5. **Rating & Ulasan (Review):**
+   * Pelanggan dapat memberikan penilaian dan ulasan pada lapangan setelah selesai bermain.
+
+---
+*Laporan ini diperbarui secara otomatis berdasarkan peninjauan struktur kode dan fitur terbaru di repositori FutsalGo.*

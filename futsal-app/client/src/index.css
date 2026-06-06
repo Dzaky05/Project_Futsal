@@ -286,6 +286,7 @@ body {
 @media (max-width: 480px) {
   .schedule-grid { grid-template-columns: repeat(2, 1fr); }
   .stat-grid { grid-template-columns: 1fr; }
+  .profile-name { display: none; }
 }
 
 /* ======= PRINT ======= */
