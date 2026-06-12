@@ -218,6 +218,9 @@ body {
 .slot-available:hover { background: var(--green-200); transform: scale(1.05); }
 .slot-booked { background: var(--gray-200); color: var(--gray-500); cursor: not-allowed; }
 .slot-blocked { background: var(--orange-100); color: var(--orange-500); cursor: not-allowed; }
+.slot-blocked-rest { background: var(--blue-100); color: var(--blue-500); cursor: not-allowed; }
+.slot-blocked-maintenance { background: var(--orange-100); color: var(--orange-500); cursor: not-allowed; }
+.slot-blocked-event { background: var(--yellow-100); color: var(--yellow-500); cursor: not-allowed; }
 .slot-past { background: var(--gray-100); color: var(--gray-400); cursor: not-allowed; }
 
 /* ======= PAYMENT METHOD CARDS ======= */

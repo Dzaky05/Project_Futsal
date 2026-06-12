@@ -58,13 +58,14 @@ export default function Schedule() {
     navigate(`/booking?field_id=${selectedField}&date=${date}&start=${slot.start_time}&end=${slot.end_time}`);
   };
 
-  const getSlotClass = (status) => {
-    switch (status) {
-      case 'available': return 'slot-available';
-      case 'booked': return 'slot-booked';
-      case 'blocked': return 'slot-blocked';
-      default: return 'slot-past';
+  const getSlotClass = (status, reason) => {
+    if (status === 'available') return 'slot-available';
+    if (status === 'booked') return 'slot-booked';
+    if (status === 'blocked') {
+      if (reason) return `slot-blocked-${reason}`; // e.g. slot-blocked-rest
+      return 'slot-blocked';
     }
+    return 'slot-past';
   };
 
   const getSlotLabel = (status) => {
@@ -209,8 +210,16 @@ export default function Schedule() {
           Sudah Dipesan
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{ width: '14px', height: '14px', borderRadius: '4px', background: 'var(--blue-100)' }}></span>
+          Istirahat
+        </span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <span style={{ width: '14px', height: '14px', borderRadius: '4px', background: 'var(--orange-100)' }}></span>
-          Diblokir
+          Maintenance
+        </span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{ width: '14px', height: '14px', borderRadius: '4px', background: 'var(--yellow-100)' }}></span>
+          Event
         </span>
       </div>
 
@@ -258,7 +267,7 @@ export default function Schedule() {
                     return (
                       <td key={dayIdx} style={{ padding: '3px', borderBottom: '1px solid var(--gray-100)' }}>
                         <div
-                          className={`schedule-slot ${getSlotClass(slot.status)}`}
+                          className={`schedule-slot ${getSlotClass(slot.status, slot.reason)}`}
                           onClick={() => handleSlotClick(slot, day.date)}
                           title={getSlotLabel(slot.status)}
                           style={{ margin: 0, fontSize: '11px', padding: '6px 2px' }}
