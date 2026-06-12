@@ -57,7 +57,11 @@ export default function BlockSlots() {
   };
 
   const reasonLabels = { maintenance: '🔧 Maintenance', event: '🎉 Event', rest: '💤 Istirahat' };
-  const reasonColors = { maintenance: { bg: '#fef3c7', color: '#92400e' }, event: { bg: '#dbeafe', color: '#1e40af' }, rest: { bg: '#f3e8ff', color: '#6b21a8' } };
+  const reasonColors = {
+    maintenance: { bg: 'var(--orange-100)', color: 'var(--orange-500)' },
+    event: { bg: 'var(--yellow-100)', color: 'var(--yellow-500)' },
+    rest: { bg: 'var(--blue-100)', color: 'var(--blue-500)' },
+  };
 
   return (
     <div className="fade-in">

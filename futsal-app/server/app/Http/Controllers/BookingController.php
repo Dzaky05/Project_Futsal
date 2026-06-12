@@ -240,7 +240,7 @@ class BookingController extends Controller
             'revenue_this_month' => Payment::where('status', 'lunas')
                 ->whereMonth('verified_at', $today->month)
                 ->whereYear('verified_at', $today->year)
-                ->sum('amount'),
+                ->sum(DB::raw('ABS(amount)')),
             'total_bookings' => Booking::count(),
             'confirmed_bookings' => Booking::where('status', 'confirmed')->count(),
         ]);
