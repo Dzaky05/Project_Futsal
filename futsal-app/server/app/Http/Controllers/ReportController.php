@@ -22,14 +22,18 @@ class ReportController extends Controller
             ->orderBy('verified_at', 'desc')
             ->get();
 
-        $totalRevenue = $payments->sum('amount');
+        $totalRevenue = $payments->sum(function ($p) {
+            return abs($p->amount);
+        });
         $totalTransactions = $payments->count();
 
         // Revenue by payment method
         $byMethod = $payments->groupBy('payment_method')->map(function ($group) {
             return [
                 'count' => $group->count(),
-                'total' => $group->sum('amount'),
+                'total' => $group->sum(function ($p) {
+                    return abs($p->amount);
+                }),
             ];
         });
 
@@ -39,7 +43,9 @@ class ReportController extends Controller
         })->map(function ($group, $date) {
             return [
                 'date' => $date,
-                'total' => $group->sum('amount'),
+                'total' => $group->sum(function ($p) {
+                    return abs($p->amount);
+                }),
                 'count' => $group->count(),
             ];
         })->values();
@@ -67,7 +73,9 @@ class ReportController extends Controller
             ->orderBy('verified_at', 'desc')
             ->get();
 
-        $totalRevenue = $payments->sum('amount');
+        $totalRevenue = $payments->sum(function ($p) {
+            return abs($p->amount);
+        });
 
         $pdf = Pdf::loadView('pdf.financial-report', [
             'payments' => $payments,

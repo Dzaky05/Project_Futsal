@@ -203,11 +203,11 @@ class BookingController extends Controller
             'pending_payments' => Payment::where('status', 'menunggu_verifikasi')->count(),
             'revenue_today' => Payment::where('status', 'lunas')
                 ->whereDate('verified_at', $today)
-                ->sum('amount'),
+                ->sum(DB::raw('ABS(amount)')),
             'revenue_month' => Payment::where('status', 'lunas')
                 ->whereMonth('verified_at', $today->month)
                 ->whereYear('verified_at', $today->year)
-                ->sum('amount'),
+                ->sum(DB::raw('ABS(amount)')),
             'recent_bookings' => Booking::with(['field', 'user', 'payment'])
                 ->orderBy('created_at', 'desc')
                 ->limit(10)
