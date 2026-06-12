@@ -9,6 +9,10 @@ export default function BookingDetail() {
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);
   const [proofUrl, setProofUrl] = useState(null);
+  const [reviewText, setReviewText] = useState('');
+  const [reviewRating, setReviewRating] = useState(5);
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewMessage, setReviewMessage] = useState('');
 
   useEffect(() => {
     api.get(`/bookings/${id}`)
@@ -49,6 +53,26 @@ export default function BookingDetail() {
 
   const bs = BOOKING_STATUS[booking.status];
   const ps = booking.payment ? PAYMENT_STATUS[booking.payment.status] : null;
+
+  const handleSubmitReview = async () => {
+    if (!booking) return;
+    setSubmittingReview(true);
+    setReviewMessage('');
+
+    try {
+      const res = await api.post('/reviews', {
+        booking_id: booking.id,
+        rating: reviewRating,
+        comment: reviewText,
+      });
+      setReviewMessage(res.data?.message || 'Ulasan berhasil dikirim.');
+      setReviewText('');
+    } catch (err) {
+      setReviewMessage(err.response?.data?.message || 'Gagal mengirim ulasan.');
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
 
   return (
     <div className="fade-in">
@@ -152,6 +176,41 @@ export default function BookingDetail() {
           )}
         </div>
       </div>
+
+      {booking.status === 'completed' && (
+        <div className="card" style={{ marginTop: '24px' }}>
+          <h3 style={{ fontFamily: "'Poppins', sans-serif", fontSize: '16px', fontWeight: '600', color: 'var(--green-800)', marginBottom: '12px' }}>
+            ⭐ Beri Ulasan
+          </h3>
+          <p style={{ fontSize: '13px', color: 'var(--gray-500)', marginBottom: '12px' }}>
+            Bagikan pengalaman Anda setelah bermain di lapangan ini.
+          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+            {[1, 2, 3, 4, 5].map(star => (
+              <button
+                key={star}
+                type="button"
+                onClick={() => setReviewRating(star)}
+                style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '22px', color: star <= reviewRating ? '#f59e0b' : 'var(--gray-300)' }}
+              >★</button>
+            ))}
+          </div>
+          <textarea
+            value={reviewText}
+            onChange={(e) => setReviewText(e.target.value)}
+            rows={4}
+            placeholder="Ceritakan pengalaman Anda (opsional)"
+            className="form-input form-textarea"
+            style={{ minHeight: '90px' }}
+          />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginTop: '12px', flexWrap: 'wrap' }}>
+            <button className="btn btn-primary" onClick={handleSubmitReview} disabled={submittingReview}>
+              {submittingReview ? 'Mengirim...' : 'Kirim Ulasan'}
+            </button>
+            {reviewMessage && <span style={{ color: 'var(--green-700)', fontSize: '13px', fontWeight: '500' }}>{reviewMessage}</span>}
+          </div>
+        </div>
+      )}
 
       {/* Actions */}
       <div style={{ display: 'flex', gap: '12px', marginTop: '24px', justifyContent: 'center', flexWrap: 'wrap' }}>

@@ -9,6 +9,7 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\BlockedSlotController;
 use App\Http\Controllers\OperationalHourController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\ReviewController;
 
 // ===== PUBLIC ROUTES =====
 Route::post('/register', [AuthController::class, 'register']);
@@ -39,7 +40,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Upload payment proof (re-upload)
     Route::post('/payments/{id}/upload-proof', [PaymentController::class, 'uploadProof']);
+
+    // Reviews
+    Route::post('/reviews', [ReviewController::class, 'store']);
 });
+
+Route::get('/fields/{fieldId}/reviews', [ReviewController::class, 'indexForField']);
 
 // ===== ADMIN ROUTES =====
 Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {
