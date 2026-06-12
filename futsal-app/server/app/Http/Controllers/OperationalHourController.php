@@ -7,12 +7,15 @@ use Illuminate\Http\Request;
 
 class OperationalHourController extends Controller
 {
-    public function index($fieldId)
+    public function index(Request $request, $fieldId)
     {
-        $hours = OperationalHour::where('field_id', $fieldId)
-            ->orderBy('day_of_week')
-            ->get();
+        $query = OperationalHour::where('field_id', $fieldId);
 
+        if ($request->has('start_date') && $request->has('end_date')) {
+            $query->whereBetween('date', [$request->start_date, $request->end_date]);
+        }
+
+        $hours = $query->orderBy('date')->get();
         return response()->json($hours);
     }
 
@@ -20,7 +23,7 @@ class OperationalHourController extends Controller
     {
         $request->validate([
             'hours' => 'required|array',
-            'hours.*.day_of_week' => 'required|integer|between:0,6',
+            'hours.*.date' => 'required|date',
             'hours.*.open_time' => 'required|date_format:H:i',
             'hours.*.close_time' => 'required|date_format:H:i|after:hours.*.open_time',
             'hours.*.is_open' => 'required|boolean',
@@ -30,7 +33,7 @@ class OperationalHourController extends Controller
             OperationalHour::updateOrCreate(
                 [
                     'field_id' => $fieldId,
-                    'day_of_week' => $hourData['day_of_week'],
+                    'date' => $hourData['date'],
                 ],
                 [
                     'open_time' => $hourData['open_time'],
@@ -42,7 +45,9 @@ class OperationalHourController extends Controller
 
         return response()->json([
             'message' => 'Jam operasional berhasil diperbarui!',
-            'hours' => OperationalHour::where('field_id', $fieldId)->orderBy('day_of_week')->get(),
+            'hours' => OperationalHour::where('field_id', $fieldId)
+                        ->whereIn('date', collect($request->hours)->pluck('date'))
+                        ->orderBy('date')->get(),
         ]);
     }
 }

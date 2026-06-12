@@ -10,6 +10,7 @@ export default function PaymentVerification() {
   const [selected, setSelected] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [rejectNotes, setRejectNotes] = useState('');
+  const [proofUrl, setProofUrl] = useState(null);
 
   const fetchPayments = () => {
     setLoading(true);
@@ -25,6 +26,29 @@ export default function PaymentVerification() {
   };
 
   useEffect(() => { fetchPayments(); }, [filter]);
+
+  useEffect(() => {
+    if (!showModal || !selected) {
+      setProofUrl(null);
+      return;
+    }
+
+    let active = true;
+    api.get(`/admin/payments/${selected.id}/proof`, { responseType: 'blob' })
+      .then(res => {
+        if (!active) return;
+        const url = URL.createObjectURL(res.data);
+        setProofUrl(url);
+      })
+      .catch(() => { if (active) setProofUrl(null); });
+
+    return () => {
+      active = false;
+      if (proofUrl) {
+        URL.revokeObjectURL(proofUrl);
+      }
+    };
+  }, [showModal, selected]);
 
   const verifyPayment = async (id, status) => {
     const action = status === 'lunas' ? 'menyetujui' : 'menolak';
@@ -77,6 +101,7 @@ export default function PaymentVerification() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '16px' }}>
           {payments.map(p => {
             const ps = PAYMENT_STATUS[p.status];
+            const isDeposit = Boolean(p.is_deposit);
             return (
               <div key={p.id} className="card" style={{ padding: '20px', cursor: 'pointer' }}
                 onClick={() => { setSelected(p); setShowModal(true); }}
@@ -99,6 +124,11 @@ export default function PaymentVerification() {
                     {formatRupiah(p.amount)}
                   </span>
                 </div>
+                {isDeposit && (
+                  <div style={{ marginTop: '8px', padding: '8px 10px', background: 'var(--green-50)', borderRadius: 'var(--radius-sm)', color: 'var(--green-700)', fontSize: '12px', fontWeight: '600' }}>
+                    💸 DP 50% • Sisa tagihan {formatRupiah(p.remaining_amount || 0)}
+                  </div>
+                )}
                 {p.payment_proof && (
                   <div style={{ marginTop: '12px', padding: '8px', background: 'var(--green-50)', borderRadius: 'var(--radius-sm)', textAlign: 'center', fontSize: '12px', color: 'var(--green-700)' }}>
                     📎 Ada bukti pembayaran
@@ -120,8 +150,11 @@ export default function PaymentVerification() {
                 ['Pemesan', selected.user?.name],
                 ['Metode', PAYMENT_METHODS[selected.payment_method]?.label || selected.payment_method],
                 ['Jumlah', formatRupiah(selected.amount)],
+                ['Jenis Bayar', selected.is_deposit ? 'DP 50%' : 'Pembayaran penuh'],
+                ['Sisa Tagihan', formatRupiah(selected.remaining_amount || 0)],
                 ['Tanggal', selected.payment_date ? formatDateShort(selected.payment_date) : '-'],
                 ['Status', PAYMENT_STATUS[selected.status]?.label || selected.status],
+                ['Catatan', selected.notes || '-'],
               ].map(([l, v]) => (
                 <div key={l}>
                   <div style={{ fontSize: '11px', color: 'var(--gray-400)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{l}</div>
@@ -131,11 +164,11 @@ export default function PaymentVerification() {
             </div>
 
             {/* Payment Proof Image */}
-            {selected.payment_proof && (
+            {selected.payment_proof && proofUrl && (
               <div style={{ marginBottom: '16px' }}>
                 <p style={{ fontSize: '13px', fontWeight: '600', marginBottom: '8px' }}>📎 Bukti Pembayaran:</p>
                 <img
-                  src={`http://127.0.0.1:8000/api/payments/${selected.id}/proof`}
+                  src={proofUrl}
                   alt="Bukti Pembayaran"
                   style={{ width: '100%', borderRadius: 'var(--radius-md)', border: '1px solid var(--gray-200)' }}
                   onError={e => { e.target.src = ''; e.target.alt = 'Gagal memuat gambar'; }}

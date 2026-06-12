@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import api from '../../api/axios';
+import api, { downloadPdf } from '../../api/axios';
 import { formatRupiah, formatDate, BOOKING_STATUS, PAYMENT_STATUS, PAYMENT_METHODS } from '../../utils/auth';
 
 export default function BookingDetail() {
@@ -8,12 +8,40 @@ export default function BookingDetail() {
   const { id } = useParams();
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [proofUrl, setProofUrl] = useState(null);
+  const [reviewText, setReviewText] = useState('');
+  const [reviewRating, setReviewRating] = useState(5);
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewMessage, setReviewMessage] = useState('');
 
   useEffect(() => {
     api.get(`/bookings/${id}`)
       .then(res => { setBooking(res.data.data || res.data); setLoading(false); })
       .catch(() => { setLoading(false); });
   }, [id]);
+
+  useEffect(() => {
+    if (!booking?.payment?.id) {
+      setProofUrl(null);
+      return;
+    }
+
+    let active = true;
+    api.get(`/payments/${booking.payment.id}/proof`, { responseType: 'blob' })
+      .then(res => {
+        if (!active) return;
+        const url = URL.createObjectURL(res.data);
+        setProofUrl(url);
+      })
+      .catch(() => setProofUrl(null));
+
+    return () => {
+      active = false;
+      if (proofUrl) {
+        URL.revokeObjectURL(proofUrl);
+      }
+    };
+  }, [booking]);
 
   if (loading) return <div className="loading-center"><div className="spinner"></div></div>;
   if (!booking) return (
@@ -25,6 +53,26 @@ export default function BookingDetail() {
 
   const bs = BOOKING_STATUS[booking.status];
   const ps = booking.payment ? PAYMENT_STATUS[booking.payment.status] : null;
+
+  const handleSubmitReview = async () => {
+    if (!booking) return;
+    setSubmittingReview(true);
+    setReviewMessage('');
+
+    try {
+      const res = await api.post('/reviews', {
+        booking_id: booking.id,
+        rating: reviewRating,
+        comment: reviewText,
+      });
+      setReviewMessage(res.data?.message || 'Ulasan berhasil dikirim.');
+      setReviewText('');
+    } catch (err) {
+      setReviewMessage(err.response?.data?.message || 'Gagal mengirim ulasan.');
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
 
   return (
     <div className="fade-in">
@@ -108,11 +156,11 @@ export default function BookingDetail() {
                   <span style={{ fontWeight: '500' }}>{booking.payment.notes}</span>
                 </div>
               )}
-              {booking.payment.payment_proof && (
+              {booking.payment.payment_proof && proofUrl && (
                 <div style={{ marginTop: '8px' }}>
                   <p style={{ fontSize: '13px', fontWeight: '600', color: 'var(--gray-600)', marginBottom: '8px' }}>Bukti Pembayaran:</p>
                   <img
-                    src={`http://127.0.0.1:8000/api/payments/${booking.payment.id}/proof`}
+                    src={proofUrl}
                     alt="Bukti Pembayaran"
                     style={{ maxWidth: '100%', borderRadius: 'var(--radius-md)', border: '1px solid var(--gray-200)' }}
                     onError={e => { e.target.style.display = 'none'; }}
@@ -129,11 +177,44 @@ export default function BookingDetail() {
         </div>
       </div>
 
+      {booking.status === 'completed' && (
+        <div className="card" style={{ marginTop: '24px' }}>
+          <h3 style={{ fontFamily: "'Poppins', sans-serif", fontSize: '16px', fontWeight: '600', color: 'var(--green-800)', marginBottom: '12px' }}>
+            ⭐ Beri Ulasan
+          </h3>
+          <p style={{ fontSize: '13px', color: 'var(--gray-500)', marginBottom: '12px' }}>
+            Bagikan pengalaman Anda setelah bermain di lapangan ini.
+          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+            {[1, 2, 3, 4, 5].map(star => (
+              <button
+                key={star}
+                type="button"
+                onClick={() => setReviewRating(star)}
+                style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '22px', color: star <= reviewRating ? '#f59e0b' : 'var(--gray-300)' }}
+              >★</button>
+            ))}
+          </div>
+          <textarea
+            value={reviewText}
+            onChange={(e) => setReviewText(e.target.value)}
+            rows={4}
+            placeholder="Ceritakan pengalaman Anda (opsional)"
+            className="form-input form-textarea"
+            style={{ minHeight: '90px' }}
+          />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginTop: '12px', flexWrap: 'wrap' }}>
+            <button className="btn btn-primary" onClick={handleSubmitReview} disabled={submittingReview}>
+              {submittingReview ? 'Mengirim...' : 'Kirim Ulasan'}
+            </button>
+            {reviewMessage && <span style={{ color: 'var(--green-700)', fontSize: '13px', fontWeight: '500' }}>{reviewMessage}</span>}
+          </div>
+        </div>
+      )}
+
       {/* Actions */}
       <div style={{ display: 'flex', gap: '12px', marginTop: '24px', justifyContent: 'center', flexWrap: 'wrap' }}>
-        <button className="btn btn-primary" onClick={() => {
-          window.open(`http://127.0.0.1:8000/api/bookings/${booking.id}/pdf`, '_blank');
-        }}>📄 Download PDF</button>
+        <button className="btn btn-primary" onClick={() => downloadPdf(booking.id)}>📄 Download PDF</button>
         <button className="btn btn-outline" onClick={() => navigate('/schedule')}>📅 Booking Lagi</button>
       </div>
     </div>

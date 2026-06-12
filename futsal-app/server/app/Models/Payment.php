@@ -20,6 +20,9 @@ class Payment extends Model
         'verified_by',
         'verified_at',
         'notes',
+        'is_deposit',
+        'deposit_amount',
+        'remaining_amount',
     ];
 
     protected function casts(): array
@@ -27,6 +30,9 @@ class Payment extends Model
         return [
             'payment_date' => 'date',
             'amount' => 'decimal:2',
+            'deposit_amount' => 'decimal:2',
+            'remaining_amount' => 'decimal:2',
+            'is_deposit' => 'boolean',
             'verified_at' => 'datetime',
         ];
     }

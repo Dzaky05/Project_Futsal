@@ -12,6 +12,7 @@ export default function UserLayout({ children }) {
   const navLinks = [
     { path: '/schedule', label: '📅 Jadwal', icon: '📅' },
     { path: '/bookings', label: '📋 Riwayat Booking', icon: '📋' },
+    { path: '/profile', label: '👤 Profil Saya', icon: '👤' },
   ];
 
   const handleLogout = () => {
@@ -85,7 +86,7 @@ export default function UserLayout({ children }) {
             }}>
               {user?.name?.charAt(0)?.toUpperCase() || 'U'}
             </div>
-            <span style={{ maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span className="profile-name" style={{ maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {user?.name || 'User'}
             </span>
             <span style={{ fontSize: '10px' }}>▼</span>
@@ -101,6 +102,19 @@ export default function UserLayout({ children }) {
               <div style={{ padding: '10px 14px', fontSize: '13px', color: 'var(--gray-500)', borderBottom: '1px solid var(--gray-100)' }}>
                 {user?.email}
               </div>
+              <button
+                onClick={() => { navigate('/profile'); setProfileOpen(false); }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '8px', width: '100%',
+                  padding: '10px 14px', background: 'none', border: 'none',
+                  fontSize: '13px', color: 'var(--gray-700)', cursor: 'pointer',
+                  borderRadius: 'var(--radius-sm)', transition: 'background 0.2s'
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--green-50)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'none'}
+              >
+                👤 Profil Saya
+              </button>
               <button
                 onClick={handleLogout}
                 style={{

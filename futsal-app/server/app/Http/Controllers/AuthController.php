@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -13,9 +14,11 @@ class AuthController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users', 'regex:/^[a-zA-Z0-9._%+\-]+@gmail\.com$/i'],
             'password' => 'required|string|min:6|confirmed',
             'phone' => 'nullable|string|max:20',
+        ], [
+            'email.regex' => 'Email harus menggunakan format @gmail.com!',
         ]);
 
         $user = User::create([
@@ -83,6 +86,43 @@ class AuthController extends Controller
         ]);
     }
 
+    public function forgotPassword(Request $request)
+    {
+        $request->validate(['email' => 'required|string|email']);
+
+        $status = Password::sendResetLink($request->only('email'));
+
+        if ($status === Password::RESET_LINK_SENT) {
+            return response()->json(['message' => 'Link reset password telah dikirim ke email Anda.']);
+        }
+
+        return response()->json(['message' => 'Gagal mengirim email reset password. Pastikan email terdaftar.'], 422);
+    }
+
+    public function resetPassword(Request $request)
+    {
+        $request->validate([
+            'token' => 'required|string',
+            'email' => 'required|string|email',
+            'password' => 'required|string|min:6|confirmed',
+        ]);
+
+        $status = Password::reset(
+            $request->only('email', 'password', 'password_confirmation', 'token'),
+            function (User $user, string $password) {
+                $user->password = Hash::make($password);
+                $user->save();
+                $user->tokens()->delete();
+            }
+        );
+
+        if ($status === Password::PASSWORD_RESET) {
+            return response()->json(['message' => 'Password berhasil direset. Silakan login.']);
+        }
+
+        return response()->json(['message' => trans($status)], 422);
+    }
+
     public function logout(Request $request)
     {
         $request->user()->currentAccessToken()->delete();
@@ -95,5 +135,47 @@ class AuthController extends Controller
     public function profile(Request $request)
     {
         return response()->json($request->user());
+    }
+
+    public function updateProfile(Request $request)
+    {
+        $user = $request->user();
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,' . $user->id],
+            'phone' => 'nullable|string|max:20',
+            'current_password' => 'nullable|string',
+            'password' => 'nullable|string|min:6|confirmed',
+        ]);
+
+        if (!empty($request->password)) {
+            if (empty($request->current_password)) {
+                throw ValidationException::withMessages([
+                    'current_password' => ['Password saat ini wajib diisi untuk mengubah password.'],
+                ]);
+            }
+
+            if (!Hash::check($request->current_password, $user->password)) {
+                throw ValidationException::withMessages([
+                    'current_password' => ['Password saat ini tidak sesuai.'],
+                ]);
+            }
+        }
+
+        $user->name = $request->name;
+        $user->email = $request->email;
+        $user->phone = $request->phone;
+
+        if (!empty($request->password)) {
+            $user->password = Hash::make($request->password);
+        }
+
+        $user->save();
+
+        return response()->json([
+            'message' => 'Profil berhasil diperbarui.',
+            'user' => $user->fresh(),
+        ]);
     }
 }

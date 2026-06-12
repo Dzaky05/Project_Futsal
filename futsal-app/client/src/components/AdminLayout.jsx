@@ -9,6 +9,7 @@ export default function AdminLayout({ children }) {
 
   const navItems = [
     { path: '/admin/dashboard', label: 'Dashboard', icon: '📊' },
+    { path: '/admin/schedule', label: 'Kelola Jadwal', icon: '📅' },
     { path: '/admin/bookings', label: 'Kelola Booking', icon: '📋' },
     { path: '/admin/payments', label: 'Verifikasi Pembayaran', icon: '💳' },
     { path: '/admin/fields', label: 'Kelola Lapangan', icon: '⚽' },

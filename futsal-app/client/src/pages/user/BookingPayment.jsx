@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import api from '../../api/axios';
+import QRCode from 'qrcode';
+import api, { downloadPdf } from '../../api/axios';
 import { formatRupiah, PAYMENT_METHODS } from '../../utils/auth';
 import Modal from '../../components/Modal';
 
@@ -12,6 +13,7 @@ export default function BookingPayment() {
   const [submitting, setSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [createdBookingId, setCreatedBookingId] = useState(null);
+  const [isDeposit, setIsDeposit] = useState(false);
 
   const fieldId = searchParams.get('field_id');
   const date = searchParams.get('date');
@@ -24,9 +26,12 @@ export default function BookingPayment() {
     end_time: endTime || '',
     payment_method: '',
     notes: '',
+    payment_notes: '',
   });
   const [proofFile, setProofFile] = useState(null);
   const [proofPreview, setProofPreview] = useState(null);
+  const [qrisImage, setQrisImage] = useState(null);
+  const [qrisPayload, setQrisPayload] = useState('');
 
   useEffect(() => {
     if (fieldId) {
@@ -45,6 +50,21 @@ export default function BookingPayment() {
 
   const duration = calcDuration();
   const totalPrice = field ? duration * Number(field.price_per_hour) : 0;
+  const depositAmount = isDeposit ? Math.round(totalPrice * 0.5) : totalPrice;
+  const remainingAmount = Math.max(0, totalPrice - depositAmount);
+
+  useEffect(() => {
+    if (formData.payment_method === 'qris' && field && formData.booking_date && formData.start_time && formData.end_time) {
+      const payload = `FUTSALGO|LAPANGAN:${field.name}|TANGGAL:${formData.booking_date}|WAKTU:${formData.start_time}-${formData.end_time}|JUMLAH:${Math.round(totalPrice)}`;
+      setQrisPayload(payload);
+      QRCode.toDataURL(payload, { width: 260, margin: 2 })
+        .then(setQrisImage)
+        .catch(() => setQrisImage(null));
+    } else {
+      setQrisImage(null);
+      setQrisPayload('');
+    }
+  }, [formData.payment_method, field, formData.booking_date, formData.start_time, formData.end_time, totalPrice]);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -61,6 +81,11 @@ export default function BookingPayment() {
     if (!formData.payment_method) return alert('Pilih metode pembayaran!');
     if (duration <= 0) return alert('Durasi tidak valid!');
 
+    // Require proof for non-cash methods
+    if (formData.payment_method !== 'cash' && !proofFile) {
+      return alert('Upload bukti pembayaran terlebih dahulu!');
+    }
+
     setSubmitting(true);
     try {
       const payload = new FormData();
@@ -70,12 +95,17 @@ export default function BookingPayment() {
       payload.append('end_time', formData.end_time);
       payload.append('payment_method', formData.payment_method);
       payload.append('notes', formData.notes);
+      payload.append('payment_notes', formData.payment_notes);
+      payload.append('is_deposit', String(isDeposit));
       if (proofFile) payload.append('payment_proof', proofFile);
 
       const res = await api.post('/bookings', payload, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      setCreatedBookingId(res.data.data?.id || res.data.id);
+
+      // Backend returns { message, booking } — booking object has the id
+      const bookingData = res.data.booking || res.data.data || res.data;
+      setCreatedBookingId(bookingData.id);
       setShowSuccess(true);
     } catch (err) {
       alert(err.response?.data?.message || 'Gagal membuat booking!');
@@ -85,6 +115,16 @@ export default function BookingPayment() {
   };
 
   const selectedMethod = PAYMENT_METHODS[formData.payment_method];
+
+  // Check if submit button should be disabled
+  const isSubmitDisabled = () => {
+    if (submitting) return true;
+    if (!formData.payment_method) return true;
+    if (duration <= 0) return true;
+    // Require proof for non-cash
+    if (formData.payment_method !== 'cash' && !proofFile) return true;
+    return false;
+  };
 
   if (loading) return <div className="loading-center"><div className="spinner"></div></div>;
   if (!field) return (
@@ -210,10 +250,57 @@ export default function BookingPayment() {
                 </div>
               )}
 
-              {/* Payment Proof Upload */}
+              {/* QRIS Info */}
+              {formData.payment_method === 'qris' && (
+                <div style={{
+                  marginTop: '16px', padding: '20px', background: 'var(--green-50)',
+                  borderRadius: 'var(--radius-md)', border: '1px solid var(--green-200)', textAlign: 'center'
+                }}>
+                  <p style={{ fontSize: '13px', fontWeight: '600', color: 'var(--green-800)', marginBottom: '12px' }}>
+                    Scan QR Code untuk pembayaran:
+                  </p>
+                  <div style={{
+                    width: '220px', height: '220px', margin: '0 auto', background: 'white',
+                    borderRadius: '18px', border: '2px solid var(--green-200)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    padding: '16px'
+                  }}>
+                    {qrisImage ? (
+                      <img src={qrisImage} alt="QRIS" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                    ) : (
+                      <span style={{ fontSize: '48px' }}>📱</span>
+                    )}
+                  </div>
+                  <p style={{ fontSize: '12px', color: 'var(--gray-600)', marginTop: '12px' }}>
+                    QR Code akan dihasilkan otomatis dari detail booking. Pastikan scan dan unggah bukti pembayaran.
+                  </p>
+                  {qrisPayload && (
+                    <div style={{ marginTop: '12px', padding: '12px', borderRadius: '12px', background: 'rgba(245, 255, 244, 0.85)', fontSize: '12px', color: 'var(--gray-700)', wordBreak: 'break-word' }}>
+                      <strong>Kode QRIS:</strong><br />{qrisPayload}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Cash Info */}
+              {formData.payment_method === 'cash' && (
+                <div style={{
+                  marginTop: '16px', padding: '14px', background: 'var(--green-50)',
+                  borderRadius: 'var(--radius-md)', border: '1px solid var(--green-200)'
+                }}>
+                  <p style={{ fontSize: '14px', fontWeight: '600', color: 'var(--green-800)', marginBottom: '4px' }}>
+                    💵 Bayar di Tempat
+                  </p>
+                  <p style={{ fontSize: '13px', color: 'var(--green-700)' }}>
+                    Silakan bayar langsung di kasir saat datang ke lapangan. Tunjukkan bukti booking Anda.
+                  </p>
+                </div>
+              )}
+
+              {/* Payment Proof Upload — only for non-cash */}
               {formData.payment_method && formData.payment_method !== 'cash' && (
                 <div className="form-group" style={{ marginTop: '16px' }}>
-                  <label className="form-label">📎 Upload Bukti Pembayaran</label>
+                  <label className="form-label">📎 Upload Bukti Pembayaran *</label>
                   <div style={{
                     border: '2px dashed var(--green-300)', borderRadius: 'var(--radius-md)',
                     padding: '24px', textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s',
@@ -221,17 +308,47 @@ export default function BookingPayment() {
                   }}
                     onClick={() => document.getElementById('proof-input').click()}
                   >
-                    <input id="proof-input" type="file" accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} />
+                    <input id="proof-input" type="file" accept="image/*,.pdf" onChange={handleFileChange} style={{ display: 'none' }} />
                     {proofPreview ? (
-                      <img src={proofPreview} alt="Bukti" style={{ maxHeight: '200px', maxWidth: '100%', borderRadius: '8px' }} />
+                      <div>
+                        <img src={proofPreview} alt="Bukti" style={{ maxHeight: '200px', maxWidth: '100%', borderRadius: '8px' }} />
+                        <p style={{ fontSize: '12px', color: 'var(--green-600)', marginTop: '8px', fontWeight: '500' }}>
+                          ✅ Bukti terupload — klik untuk ganti
+                        </p>
+                      </div>
                     ) : (
                       <>
                         <div style={{ fontSize: '36px', marginBottom: '8px' }}>📤</div>
                         <p style={{ fontSize: '13px', color: 'var(--gray-500)' }}>Klik untuk upload bukti transfer</p>
-                        <p style={{ fontSize: '11px', color: 'var(--gray-400)', marginTop: '4px' }}>JPG, PNG max 2MB</p>
+                        <p style={{ fontSize: '11px', color: 'var(--gray-400)', marginTop: '4px' }}>JPG, PNG, PDF max 5MB</p>
                       </>
                     )}
                   </div>
+                </div>
+              )}
+
+              <div style={{ marginTop: '16px', padding: '14px', borderRadius: 'var(--radius-md)', background: 'var(--green-50)', border: '1px solid var(--green-200)' }}>
+                <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', cursor: 'pointer', fontWeight: '600', color: 'var(--green-800)', fontSize: '14px' }}>
+                  <span>💸 Bayar DP 50% untuk mengamankan slot</span>
+                  <input
+                    type="checkbox"
+                    checked={isDeposit}
+                    onChange={(e) => setIsDeposit(e.target.checked)}
+                    style={{ width: '16px', height: '16px', accentColor: 'var(--green-600)' }}
+                  />
+                </label>
+                <p style={{ fontSize: '12px', color: 'var(--green-700)', marginTop: '6px' }}>
+                  Aktifkan opsi ini jika Anda ingin membayar DP 50% sekarang, lalu melunasi sisanya secara tunai di lokasi.
+                </p>
+              </div>
+
+              {/* Payment Notes */}
+              {formData.payment_method && (
+                <div className="form-group" style={{ marginTop: '12px' }}>
+                  <label className="form-label">Catatan Pembayaran (opsional)</label>
+                  <textarea className="form-input form-textarea" placeholder="Catatan pembayaran..."
+                    value={formData.payment_notes} onChange={e => setFormData({ ...formData, payment_notes: e.target.value })}
+                    style={{ minHeight: '60px' }} />
                 </div>
               )}
             </div>
@@ -272,21 +389,33 @@ export default function BookingPayment() {
                 )}
                 <div style={{ borderTop: '2px solid var(--gray-200)', paddingTop: '12px', marginTop: '4px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontWeight: '600', fontSize: '15px', color: 'var(--gray-700)' }}>Total</span>
-                    <span style={{
-                      fontWeight: '700', fontSize: '22px', color: 'var(--green-700)',
-                      fontFamily: "'Poppins', sans-serif"
-                    }}>
-                      {formatRupiah(totalPrice)}
+                    <span style={{ fontWeight: '600', fontSize: '15px', color: 'var(--gray-700)' }}>Total Pesanan</span>
+                    <span style={{ fontWeight: '600', fontSize: '14px', color: 'var(--gray-700)' }}>{formatRupiah(totalPrice)}</span>
+                  </div>
+                  {isDeposit && (
+                    <>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
+                        <span style={{ color: 'var(--gray-500)' }}>DP 50% dibayar sekarang</span>
+                        <span style={{ fontWeight: '600', color: 'var(--green-700)' }}>{formatRupiah(depositAmount)}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                        <span style={{ color: 'var(--gray-500)' }}>Sisa tunai di lokasi</span>
+                        <span style={{ fontWeight: '600', color: 'var(--gray-700)' }}>{formatRupiah(remainingAmount)}</span>
+                      </div>
+                    </>
+                  )}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
+                    <span style={{ fontWeight: '700', fontSize: '15px', color: 'var(--gray-800)' }}>{isDeposit ? 'Bayar Sekarang' : 'Total Bayar'}</span>
+                    <span style={{ fontWeight: '700', fontSize: '20px', color: 'var(--green-700)', fontFamily: "'Poppins', sans-serif" }}>
+                      {formatRupiah(isDeposit ? depositAmount : totalPrice)}
                     </span>
                   </div>
                 </div>
               </div>
 
               <button type="submit" className="btn btn-primary btn-lg"
-                disabled={submitting || !formData.payment_method || duration <= 0}
+                disabled={isSubmitDisabled()}
                 style={{ width: '100%', marginTop: '24px' }}
-                onClick={handleSubmit}
               >
                 {submitting ? (
                   <><div className="spinner" style={{ width: '18px', height: '18px', borderWidth: '2px' }}></div> Memproses...</>
@@ -294,6 +423,13 @@ export default function BookingPayment() {
                   '✅ KONFIRMASI PESANAN & BAYAR'
                 )}
               </button>
+
+              {/* Hint about requirements */}
+              {formData.payment_method && formData.payment_method !== 'cash' && !proofFile && (
+                <p style={{ fontSize: '11px', color: 'var(--red-500)', textAlign: 'center', marginTop: '8px' }}>
+                  ⚠️ Upload bukti pembayaran untuk melanjutkan
+                </p>
+              )}
 
               <p style={{ fontSize: '11px', color: 'var(--gray-400)', textAlign: 'center', marginTop: '12px' }}>
                 Dengan memesan, Anda menyetujui syarat dan ketentuan FutsalGo
@@ -310,14 +446,18 @@ export default function BookingPayment() {
           <h2 style={{ fontFamily: "'Poppins', sans-serif", fontSize: '20px', fontWeight: '700', color: 'var(--green-800)', marginBottom: '8px' }}>
             Booking Berhasil!
           </h2>
-          <p style={{ color: 'var(--gray-500)', fontSize: '14px', marginBottom: '24px' }}>
+          <p style={{ color: 'var(--gray-500)', fontSize: '14px', marginBottom: '8px' }}>
             Pesanan Anda telah dikirim. Menunggu verifikasi pembayaran dari admin.
           </p>
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '16px' }}>
+            <span className="badge badge-pending" style={{ fontSize: '12px', padding: '6px 14px' }}>📋 Status: Pending</span>
+            <span className="badge badge-menunggu" style={{ fontSize: '12px', padding: '6px 14px' }}>💳 Menunggu Verifikasi</span>
+          </div>
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
             {createdBookingId && (
-              <button className="btn btn-outline" onClick={() => {
-                window.open(`http://127.0.0.1:8000/api/bookings/${createdBookingId}/pdf`, '_blank');
-              }}>📄 Download PDF</button>
+              <button className="btn btn-outline" onClick={() => downloadPdf(createdBookingId)}>
+                📄 Download PDF
+              </button>
             )}
             <button className="btn btn-primary" onClick={() => navigate('/bookings')}>
               Lihat Riwayat →

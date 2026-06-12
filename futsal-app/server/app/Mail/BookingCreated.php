@@ -1,0 +1,29 @@
+<?php
+
+namespace App\Mail;
+
+use App\Models\Booking;
+use Illuminate\Bus\Queueable;
+use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Markdown as MailMarkdown;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Queue\SerializesModels;
+
+class BookingCreated extends Mailable
+{
+    use Queueable, SerializesModels;
+
+    public Booking $booking;
+
+    public function __construct(Booking $booking)
+    {
+        $this->booking = $booking;
+    }
+
+    public function build()
+    {
+        return $this->subject("Pemesanan FutsalGo Diterima - #{$this->booking->id}")
+            ->view('emails.booking-created')
+            ->with(['booking' => $this->booking]);
+    }
+}

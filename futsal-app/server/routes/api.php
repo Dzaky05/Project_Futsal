@@ -9,11 +9,14 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\BlockedSlotController;
 use App\Http\Controllers\OperationalHourController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\ReviewController;
 
 // ===== PUBLIC ROUTES =====
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/admin/login', [AuthController::class, 'adminLogin']);
+Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
+Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 
 // Public: list active fields
 Route::get('/fields', [FieldController::class, 'index']);
@@ -27,6 +30,7 @@ Route::get('/schedule/available', [ScheduleController::class, 'getAvailableSlots
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/profile', [AuthController::class, 'profile']);
+    Route::put('/profile', [AuthController::class, 'updateProfile']);
 
     // Bookings
     Route::get('/bookings', [BookingController::class, 'index']);
@@ -36,14 +40,21 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Upload payment proof (re-upload)
     Route::post('/payments/{id}/upload-proof', [PaymentController::class, 'uploadProof']);
+
+    // Reviews
+    Route::post('/reviews', [ReviewController::class, 'store']);
 });
+
+Route::get('/fields/{fieldId}/reviews', [ReviewController::class, 'indexForField']);
 
 // ===== ADMIN ROUTES =====
 Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {
     // Dashboard
     Route::get('/dashboard', [BookingController::class, 'todayStats']);
+    Route::get('/bookings/stats', [BookingController::class, 'adminStats']);
 
     // Manage Bookings
+    Route::get('/bookings', [BookingController::class, 'index']);
     Route::put('/bookings/{id}/status', [BookingController::class, 'updateStatus']);
 
     // Payments
@@ -66,6 +77,9 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
     Route::get('/blocked-slots', [BlockedSlotController::class, 'index']);
     Route::post('/blocked-slots', [BlockedSlotController::class, 'store']);
     Route::delete('/blocked-slots/{id}', [BlockedSlotController::class, 'destroy']);
+
+    // Manage Schedule Grid (Delete by Date/Time)
+    Route::delete('/schedule/delete-slot', [ScheduleController::class, 'deleteSlot']);
 
     // Reports
     Route::get('/reports/monthly', [ReportController::class, 'monthly']);

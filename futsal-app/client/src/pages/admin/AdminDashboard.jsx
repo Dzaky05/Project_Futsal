@@ -12,13 +12,18 @@ export default function AdminDashboard() {
   useEffect(() => {
     Promise.all([
       api.get('/admin/bookings/stats'),
-      api.get('/admin/bookings', { params: { per_page: 5 } })
+      api.get('/admin/bookings')
     ]).then(([statsRes, bookingsRes]) => {
-      setStats(statsRes.data.data || statsRes.data);
-      const bData = bookingsRes.data.data || bookingsRes.data;
-      setRecentBookings(Array.isArray(bData) ? bData.slice(0, 5) : (bData.data || []).slice(0, 5));
+      setStats(statsRes.data);
+      // Handle paginated response (Laravel paginate returns { data: [...], ... })
+      const bData = bookingsRes.data;
+      const bookingsList = Array.isArray(bData) ? bData : (bData.data || []);
+      setRecentBookings(bookingsList.slice(0, 5));
       setLoading(false);
-    }).catch(() => setLoading(false));
+    }).catch((err) => {
+      console.error('Dashboard load error:', err);
+      setLoading(false);
+    });
   }, []);
 
   if (loading) return <div className="loading-center"><div className="spinner"></div></div>;
@@ -61,6 +66,7 @@ export default function AdminDashboard() {
           <button className="btn btn-primary" onClick={() => navigate('/admin/payments')}>
             💳 Verifikasi Pembayaran {stats?.pending_payments > 0 && `(${stats.pending_payments})`}
           </button>
+          <button className="btn btn-primary" onClick={() => navigate('/admin/schedule')}>📅 Kelola Jadwal</button>
           <button className="btn btn-outline" onClick={() => navigate('/admin/bookings')}>📋 Kelola Booking</button>
           <button className="btn btn-outline" onClick={() => navigate('/admin/block-slots')}>🚫 Blokir Jadwal</button>
           <button className="btn btn-outline" onClick={() => navigate('/admin/reports')}>📈 Laporan</button>

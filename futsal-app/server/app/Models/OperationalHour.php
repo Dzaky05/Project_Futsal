@@ -11,7 +11,7 @@ class OperationalHour extends Model
 
     protected $fillable = [
         'field_id',
-        'day_of_week',
+        'date',
         'open_time',
         'close_time',
         'is_open',
