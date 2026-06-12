@@ -25,6 +25,7 @@ class BookingController extends Controller
             'payment_method' => 'required|in:transfer_bca,transfer_mandiri,transfer_bri,qris,cash',
             'payment_proof' => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:5120',
             'payment_notes' => 'nullable|string',
+            'is_deposit' => 'nullable|boolean',
         ]);
 
         $field = Field::findOrFail($request->field_id);
@@ -32,8 +33,8 @@ class BookingController extends Controller
         // Calculate duration and price
         $start = Carbon::parse($request->start_time);
         $end = Carbon::parse($request->end_time);
-        $durationHours = $end->diffInMinutes($start) / 60;
-        $totalPrice = $durationHours * $field->price_per_hour;
+        $durationHours = abs($start->diffInMinutes($end)) / 60;
+        $totalPrice = round($durationHours * $field->price_per_hour, 2);
 
         // Check for conflicting bookings
         // Use >= for end_time so the end_time slot is also protected
@@ -75,20 +76,30 @@ class BookingController extends Controller
                 $proofPath = $request->file('payment_proof')->store('payment_proofs', 'public');
             }
 
+            $isDeposit = $request->boolean('is_deposit');
+            $depositAmount = $isDeposit ? round($totalPrice * 0.5, 2) : $totalPrice;
+            $remainingAmount = round($totalPrice - $depositAmount, 2);
+
             // Create payment
-            $paymentStatus = $request->payment_method === 'cash'
-                ? 'menunggu_verifikasi'
-                : 'menunggu_verifikasi';
+            $paymentStatus = 'menunggu_verifikasi';
+            $paymentNotes = $request->payment_notes;
+
+            if ($isDeposit) {
+                $paymentNotes = trim(($paymentNotes ? $paymentNotes . '\n' : '') . 'DP 50%: pelunasan sisa tagihan dilakukan tunai di lokasi.');
+            }
 
             $payment = Payment::create([
                 'booking_id' => $booking->id,
                 'user_id' => $request->user()->id,
                 'payment_method' => $request->payment_method,
                 'payment_date' => Carbon::today(),
-                'amount' => $totalPrice,
+                'amount' => $depositAmount,
                 'payment_proof' => $proofPath,
                 'status' => $paymentStatus,
-                'notes' => $request->payment_notes,
+                'notes' => $paymentNotes,
+                'is_deposit' => $isDeposit,
+                'deposit_amount' => $isDeposit ? $depositAmount : null,
+                'remaining_amount' => $isDeposit ? $remainingAmount : 0,
             ]);
 
             DB::commit();

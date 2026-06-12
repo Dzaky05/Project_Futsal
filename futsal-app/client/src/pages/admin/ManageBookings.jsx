@@ -84,6 +84,7 @@ export default function ManageBookings() {
                 ) : bookings.map(b => {
                   const bs = BOOKING_STATUS[b.status];
                   const ps = b.payment ? PAYMENT_STATUS[b.payment.status] : null;
+                  const isDeposit = Boolean(b.payment?.is_deposit);
                   return (
                     <tr key={b.id}>
                       <td style={{ fontWeight: '600' }}>#{b.id}</td>
@@ -96,7 +97,16 @@ export default function ManageBookings() {
                       <td>{b.start_time?.slice(0,5)} - {b.end_time?.slice(0,5)}</td>
                       <td style={{ fontWeight: '600', color: 'var(--green-700)' }}>{formatRupiah(b.total_price)}</td>
                       <td>{bs && <span className="badge" style={{ background: bs.bg, color: bs.color }}>{bs.label}</span>}</td>
-                      <td>{ps && <span className="badge" style={{ background: ps.bg, color: ps.color }}>{ps.label}</span>}</td>
+                      <td>
+                        {ps && <div style={{ marginBottom: '4px' }}><span className="badge" style={{ background: ps.bg, color: ps.color }}>{ps.label}</span></div>}
+                        {isDeposit ? (
+                          <div style={{ fontSize: '11px', color: 'var(--green-700)', fontWeight: '600' }}>
+                            💸 DP 50% • {formatRupiah(b.payment?.amount || 0)}
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: '11px', color: 'var(--gray-500)' }}>Pembayaran penuh</div>
+                        )}
+                      </td>
                       <td>
                         <div style={{ display: 'flex', gap: '6px' }}>
                           <button className="btn btn-outline btn-sm" onClick={() => { setSelected(b); setShowModal(true); }}>Detail</button>
@@ -124,7 +134,11 @@ export default function ManageBookings() {
                 ['Jam', `${selected.start_time?.slice(0,5)} - ${selected.end_time?.slice(0,5)}`],
                 ['Durasi', `${selected.duration_hours} jam`],
                 ['Total', formatRupiah(selected.total_price)],
+                ['Jenis Bayar', selected.payment?.is_deposit ? 'DP 50%' : 'Pembayaran penuh'],
+                ['DP Dibayar', formatRupiah(selected.payment?.amount || 0)],
+                ['Sisa Tagihan', formatRupiah(selected.payment?.remaining_amount || 0)],
                 ['Catatan', selected.notes || '-'],
+                ['Catatan Bayar', selected.payment?.notes || '-'],
               ].map(([l, v]) => (
                 <div key={l}>
                   <div style={{ fontSize: '11px', color: 'var(--gray-400)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{l}</div>

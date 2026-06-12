@@ -101,6 +101,7 @@ export default function PaymentVerification() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '16px' }}>
           {payments.map(p => {
             const ps = PAYMENT_STATUS[p.status];
+            const isDeposit = Boolean(p.is_deposit);
             return (
               <div key={p.id} className="card" style={{ padding: '20px', cursor: 'pointer' }}
                 onClick={() => { setSelected(p); setShowModal(true); }}
@@ -123,6 +124,11 @@ export default function PaymentVerification() {
                     {formatRupiah(p.amount)}
                   </span>
                 </div>
+                {isDeposit && (
+                  <div style={{ marginTop: '8px', padding: '8px 10px', background: 'var(--green-50)', borderRadius: 'var(--radius-sm)', color: 'var(--green-700)', fontSize: '12px', fontWeight: '600' }}>
+                    💸 DP 50% • Sisa tagihan {formatRupiah(p.remaining_amount || 0)}
+                  </div>
+                )}
                 {p.payment_proof && (
                   <div style={{ marginTop: '12px', padding: '8px', background: 'var(--green-50)', borderRadius: 'var(--radius-sm)', textAlign: 'center', fontSize: '12px', color: 'var(--green-700)' }}>
                     📎 Ada bukti pembayaran
@@ -144,8 +150,11 @@ export default function PaymentVerification() {
                 ['Pemesan', selected.user?.name],
                 ['Metode', PAYMENT_METHODS[selected.payment_method]?.label || selected.payment_method],
                 ['Jumlah', formatRupiah(selected.amount)],
+                ['Jenis Bayar', selected.is_deposit ? 'DP 50%' : 'Pembayaran penuh'],
+                ['Sisa Tagihan', formatRupiah(selected.remaining_amount || 0)],
                 ['Tanggal', selected.payment_date ? formatDateShort(selected.payment_date) : '-'],
                 ['Status', PAYMENT_STATUS[selected.status]?.label || selected.status],
+                ['Catatan', selected.notes || '-'],
               ].map(([l, v]) => (
                 <div key={l}>
                   <div style={{ fontSize: '11px', color: 'var(--gray-400)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{l}</div>

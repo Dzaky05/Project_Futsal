@@ -77,6 +77,12 @@ Aplikasi web FutsalGo yang dibangun menggunakan stack Laravel (Backend) dan Reac
    * Backend mengirim email otomatis saat booking dibuat (`BookingCreated`) dan diverifikasi (`PaymentStatusUpdated`).
 6. **Lupa / Reset Password:**
    * Halaman dan API untuk *Forgot Password* telah diimplementasikan.
+7. **Manajemen Profil Pengguna:**
+   * Halaman khusus bagi pelanggan untuk mengubah data diri dan *password*.
+8. **Notifikasi Real-time & Pengingat (Reminder):**
+   * Mengirim notifikasi (misal WhatsApp atau in-app) beberapa jam sebelum waktu sewa lapangan dimulai.
+9. **Sistem Deposit atau DP:**
+   * Menambahkan fitur pembayaran sebagian (DP) untuk mengamankan slot, dan pelunasan sisanya secara tunai di lokasi.
 
 ---
 
@@ -84,13 +90,7 @@ Aplikasi web FutsalGo yang dibangun menggunakan stack Laravel (Backend) dan Reac
 
 1. **Integrasi Payment Gateway Otomatis (Opsional):**
    * Beralih dari verifikasi manual/transfer ke *Payment Gateway* seperti Midtrans agar status *booking* langsung "Confirmed" seketika pelanggan membayar.
-2. **Manajemen Profil Pengguna:**
-   * Halaman khusus bagi pelanggan untuk mengubah data diri dan *password*.
-3. **Notifikasi Real-time & Pengingat (Reminder):**
-   * Mengirim notifikasi (misal WhatsApp atau in-app) beberapa jam sebelum waktu sewa lapangan dimulai.
-4. **Sistem Deposit atau DP:**
-   * Menambahkan fitur pembayaran sebagian (DP) untuk mengamankan slot, dan pelunasan sisanya secara tunai di lokasi.
-5. **Rating & Ulasan (Review):**
+2. **Rating & Ulasan (Review):**
    * Pelanggan dapat memberikan penilaian dan ulasan pada lapangan setelah selesai bermain.
 
 ---

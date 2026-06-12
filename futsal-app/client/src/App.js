@@ -12,6 +12,7 @@ import Schedule from './pages/user/Schedule';
 import BookingPayment from './pages/user/BookingPayment';
 import BookingHistory from './pages/user/BookingHistory';
 import BookingDetail from './pages/user/BookingDetail';
+import Profile from './pages/user/Profile';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 
@@ -439,6 +440,11 @@ export default function App() {
         <Route path="/bookings/:id" element={
           <ProtectedRoute>
             <UserLayout><BookingDetail /></UserLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/profile" element={
+          <ProtectedRoute>
+            <UserLayout><Profile /></UserLayout>
           </ProtectedRoute>
         } />
 

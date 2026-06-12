@@ -19,6 +19,7 @@ class Booking extends Model
         'total_price',
         'status',
         'notes',
+        'reminder_sent_at',
     ];
 
     protected function casts(): array
@@ -27,6 +28,7 @@ class Booking extends Model
             'booking_date' => 'date',
             'duration_hours' => 'decimal:1',
             'total_price' => 'decimal:2',
+            'reminder_sent_at' => 'datetime',
         ];
     }
 

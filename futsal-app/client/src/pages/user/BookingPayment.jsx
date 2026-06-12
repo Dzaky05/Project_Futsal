@@ -13,6 +13,7 @@ export default function BookingPayment() {
   const [submitting, setSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [createdBookingId, setCreatedBookingId] = useState(null);
+  const [isDeposit, setIsDeposit] = useState(false);
 
   const fieldId = searchParams.get('field_id');
   const date = searchParams.get('date');
@@ -49,6 +50,8 @@ export default function BookingPayment() {
 
   const duration = calcDuration();
   const totalPrice = field ? duration * Number(field.price_per_hour) : 0;
+  const depositAmount = isDeposit ? Math.round(totalPrice * 0.5) : totalPrice;
+  const remainingAmount = Math.max(0, totalPrice - depositAmount);
 
   useEffect(() => {
     if (formData.payment_method === 'qris' && field && formData.booking_date && formData.start_time && formData.end_time) {
@@ -93,6 +96,7 @@ export default function BookingPayment() {
       payload.append('payment_method', formData.payment_method);
       payload.append('notes', formData.notes);
       payload.append('payment_notes', formData.payment_notes);
+      payload.append('is_deposit', String(isDeposit));
       if (proofFile) payload.append('payment_proof', proofFile);
 
       const res = await api.post('/bookings', payload, {
@@ -323,6 +327,21 @@ export default function BookingPayment() {
                 </div>
               )}
 
+              <div style={{ marginTop: '16px', padding: '14px', borderRadius: 'var(--radius-md)', background: 'var(--green-50)', border: '1px solid var(--green-200)' }}>
+                <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', cursor: 'pointer', fontWeight: '600', color: 'var(--green-800)', fontSize: '14px' }}>
+                  <span>💸 Bayar DP 50% untuk mengamankan slot</span>
+                  <input
+                    type="checkbox"
+                    checked={isDeposit}
+                    onChange={(e) => setIsDeposit(e.target.checked)}
+                    style={{ width: '16px', height: '16px', accentColor: 'var(--green-600)' }}
+                  />
+                </label>
+                <p style={{ fontSize: '12px', color: 'var(--green-700)', marginTop: '6px' }}>
+                  Aktifkan opsi ini jika Anda ingin membayar DP 50% sekarang, lalu melunasi sisanya secara tunai di lokasi.
+                </p>
+              </div>
+
               {/* Payment Notes */}
               {formData.payment_method && (
                 <div className="form-group" style={{ marginTop: '12px' }}>
@@ -370,12 +389,25 @@ export default function BookingPayment() {
                 )}
                 <div style={{ borderTop: '2px solid var(--gray-200)', paddingTop: '12px', marginTop: '4px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontWeight: '600', fontSize: '15px', color: 'var(--gray-700)' }}>Total</span>
-                    <span style={{
-                      fontWeight: '700', fontSize: '22px', color: 'var(--green-700)',
-                      fontFamily: "'Poppins', sans-serif"
-                    }}>
-                      {formatRupiah(totalPrice)}
+                    <span style={{ fontWeight: '600', fontSize: '15px', color: 'var(--gray-700)' }}>Total Pesanan</span>
+                    <span style={{ fontWeight: '600', fontSize: '14px', color: 'var(--gray-700)' }}>{formatRupiah(totalPrice)}</span>
+                  </div>
+                  {isDeposit && (
+                    <>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
+                        <span style={{ color: 'var(--gray-500)' }}>DP 50% dibayar sekarang</span>
+                        <span style={{ fontWeight: '600', color: 'var(--green-700)' }}>{formatRupiah(depositAmount)}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                        <span style={{ color: 'var(--gray-500)' }}>Sisa tunai di lokasi</span>
+                        <span style={{ fontWeight: '600', color: 'var(--gray-700)' }}>{formatRupiah(remainingAmount)}</span>
+                      </div>
+                    </>
+                  )}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
+                    <span style={{ fontWeight: '700', fontSize: '15px', color: 'var(--gray-800)' }}>{isDeposit ? 'Bayar Sekarang' : 'Total Bayar'}</span>
+                    <span style={{ fontWeight: '700', fontSize: '20px', color: 'var(--green-700)', fontFamily: "'Poppins', sans-serif" }}>
+                      {formatRupiah(isDeposit ? depositAmount : totalPrice)}
                     </span>
                   </div>
                 </div>

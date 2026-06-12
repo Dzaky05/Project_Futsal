@@ -29,6 +29,7 @@ Route::get('/schedule/available', [ScheduleController::class, 'getAvailableSlots
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/profile', [AuthController::class, 'profile']);
+    Route::put('/profile', [AuthController::class, 'updateProfile']);
 
     // Bookings
     Route::get('/bookings', [BookingController::class, 'index']);
