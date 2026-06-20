@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../../api/axios';
 import Modal from '../../components/Modal';
+import ConfirmDialog from '../../components/ConfirmDialog';
 import { formatRupiah } from '../../utils/auth';
+import { toast } from 'react-hot-toast';
+import { Clock, Calendar, Wrench, Coffee, Save, Trash2, Info, Loader2, CheckCircle, Ban, CheckCircle2 } from 'lucide-react';
 
 export default function ManageSchedule() {
   const [fields, setFields] = useState([]);
@@ -16,15 +19,8 @@ export default function ManageSchedule() {
   const [savingHours, setSavingHours] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
-
-  // Block Slot state
-  const [showBlockSlot, setShowBlockSlot] = useState(false);
-  const [blockForm, setBlockForm] = useState({
-    date: '', start_time: '', end_time: '', reason: 'maintenance', description: ''
-  });
-
-  // Success message
-  const [successMsg, setSuccessMsg] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState({ isOpen: false, slot: null, date: null, label: '' });
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     api.get('/fields').then(res => {
@@ -67,13 +63,7 @@ export default function ManageSchedule() {
 
   useEffect(() => { fetchSchedule(); }, [fetchSchedule]);
 
-  // Auto-hide success message
-  useEffect(() => {
-    if (successMsg) {
-      const timer = setTimeout(() => setSuccessMsg(''), 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [successMsg]);
+  useEffect(() => { fetchSchedule(); }, [fetchSchedule]);
 
   const dayNames = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
   // DB day_of_week: 0=Sunday, 1=Monday, ..., 6=Saturday
@@ -135,7 +125,7 @@ export default function ManageSchedule() {
       setHours(allDays);
       setShowHoursModal(true);
     } catch (err) {
-      alert('Gagal memuat jam operasional: ' + (err.response?.data?.message || err.message));
+      toast.error('Gagal memuat jam operasional: ' + (err.response?.data?.message || err.message));
     }
   };
 
@@ -155,99 +145,67 @@ export default function ManageSchedule() {
       }));
       await api.put(`/admin/fields/${selectedField}/hours`, { hours: payload });
       setShowHoursModal(false);
-      setSuccessMsg('✅ Jam operasional minggu ini berhasil disimpan!');
+      toast.success('Jam operasional minggu ini berhasil disimpan!');
       fetchSchedule(); // Refresh schedule grid
     } catch (err) {
-      alert(err.response?.data?.message || 'Gagal menyimpan jam operasional');
+      toast.error(err.response?.data?.message || 'Gagal menyimpan jam operasional');
     } finally {
       setSavingHours(false);
     }
   };
 
-  // ======= Block Slot =======
-  const handleBlockSlot = async (e) => {
-    e.preventDefault();
-    // Frontend validation: cek apakah tanggal sudah lewat
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const selectedDate = new Date(blockForm.date + 'T00:00:00');
-    if (selectedDate < today) {
-      alert('⚠️ Tanggal yang dipilih sudah lewat! Tidak bisa memblokir jadwal yang sudah berlalu. Silakan pilih tanggal hari ini atau setelahnya.');
-      return;
-    }
-    setSubmitting(true);
-    try {
-      await api.post('/admin/blocked-slots', { ...blockForm, field_id: selectedField });
-      setShowBlockSlot(false);
-      setBlockForm({ date: '', start_time: '', end_time: '', reason: 'maintenance', description: '' });
-      setSuccessMsg('🚫 Slot berhasil diblokir!');
-      fetchSchedule();
-    } catch (err) {
-      alert(err.response?.data?.message || 'Gagal menambahkan blokir');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   // Slot click handler - Delete Booking or Blocked Slot
-  const handleSlotClick = async (slot, date) => {
+  const handleSlotClick = (slot, date) => {
     if (slot.status === 'blocked' || slot.status === 'booked') {
       const label = slot.status === 'booked' ? 'Pesanan (Booking)' : 'Blokir Slot';
-      if (window.confirm(`Hapus ${label} pada tanggal ${date} jam ${slot.start_time}?`)) {
-        try {
-          if (slot.status === 'blocked') {
-            // Find blocked slot ID by fetching or changing backend to return ID
-            // Since we don't have ID in schedule grid, we can make an API request to delete by date/time
-            await api.delete('/admin/schedule/delete-slot', {
-              data: { field_id: selectedField, date: date, start_time: slot.start_time, type: 'blocked' }
-            });
-          } else {
-            await api.delete('/admin/schedule/delete-slot', {
-              data: { field_id: selectedField, date: date, start_time: slot.start_time, type: 'booked' }
-            });
-          }
-          setSuccessMsg(`✅ ${label} berhasil dihapus!`);
-          fetchSchedule();
-        } catch (err) {
-          alert('Gagal menghapus jadwal: ' + (err.response?.data?.message || err.message));
-        }
-      }
+      setConfirmDelete({ isOpen: true, slot, date, label });
     } else if (slot.status === 'available') {
-      alert(`${date} ${slot.start_time}-${slot.end_time}: Slot ini masih tersedia.`);
+      toast.error(`${date} ${slot.start_time}-${slot.end_time}: Slot ini masih tersedia.`);
     }
   };
 
-  const getSlotStyle = (status) => {
+  const executeDeleteSlot = async () => {
+    const { slot, date, label } = confirmDelete;
+    setIsDeleting(true);
+    try {
+      if (slot.status === 'blocked') {
+        await api.delete('/admin/schedule/delete-slot', {
+          data: { field_id: selectedField, date: date, start_time: slot.start_time, type: 'blocked' }
+        });
+      } else {
+        await api.delete('/admin/schedule/delete-slot', {
+          data: { field_id: selectedField, date: date, start_time: slot.start_time, type: 'booked' }
+        });
+      }
+      toast.success(`${label} berhasil dihapus!`);
+      fetchSchedule();
+      setConfirmDelete({ isOpen: false, slot: null, date: null, label: '' });
+    } catch (err) {
+      toast.error('Gagal menghapus jadwal: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const getSlotClass = (status, reason) => {
+    if (status === 'available') return 'slot-available';
+    if (status === 'booked') return 'slot-booked';
+    if (status === 'blocked') {
+      if (reason) return `slot-blocked-${reason}`;
+      return 'slot-blocked';
+    }
+    return 'slot-past';
+  };
+
+  const getSlotIcon = (status, reason) => {
     switch (status) {
-      case 'available':
-        return {
-          background: 'var(--green-100)', color: 'var(--green-800)',
-          border: '1px solid var(--green-200)', cursor: 'default'
-        };
-      case 'booked':
-        return {
-          background: '#dbeafe', color: '#1e40af',
-          border: '1px solid #bfdbfe', cursor: 'default'
-        };
+      case 'available': return <CheckCircle2 size={14} />;
+      case 'booked': return <Calendar size={14} />;
       case 'blocked':
-        return {
-          background: 'var(--orange-100)', color: '#9a3412',
-          border: '1px solid #fed7aa', cursor: 'default'
-        };
-      default: // past
-        return {
-          background: 'var(--gray-100)', color: 'var(--gray-400)',
-          border: '1px solid var(--gray-200)', cursor: 'default'
-        };
-    }
-  };
-
-  const getSlotIcon = (status) => {
-    switch (status) {
-      case 'available': return '✅';
-      case 'booked': return '📋';
-      case 'blocked': return '🚫';
-      default: return '⏱️';
+        if (reason === 'rest') return <Coffee size={14} />;
+        if (reason === 'event') return <Calendar size={14} />;
+        return <Wrench size={14} />;
+      default: return <Clock size={14} />;
     }
   };
 
@@ -272,42 +230,19 @@ export default function ManageSchedule() {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h1 style={{ fontFamily: "'Poppins', sans-serif", fontSize: '24px', fontWeight: '700', color: 'var(--green-900)' }}>
-            📅 Kelola Jadwal
+          <h1 style={{ fontFamily: "'Poppins', sans-serif", fontSize: '24px', fontWeight: '700', color: 'var(--green-900)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Calendar color="#34d399" size={28} /> Kelola Jadwal
           </h1>
           <p style={{ color: 'var(--gray-500)', fontSize: '14px', marginTop: '4px' }}>
             Atur jam operasional, input jadwal bermain, dan blokir slot
           </p>
         </div>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <button className="btn btn-outline" onClick={openHoursModal}>
-            🕐 Jam Operasional
-          </button>
-          <button className="btn btn-outline" onClick={() => {
-            setBlockForm({ date: todayStr, start_time: '', end_time: '', reason: 'maintenance', description: '' });
-            setShowBlockSlot(true);
-          }}>
-            🚫 Blokir Slot
+          <button className="btn btn-outline" onClick={openHoursModal} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Clock size={16} /> Jam Operasional
           </button>
         </div>
       </div>
-
-      {/* Success Message */}
-      {successMsg && (
-        <div style={{
-          background: 'var(--green-50)', border: '1px solid var(--green-200)',
-          borderRadius: '12px', padding: '12px 16px', marginBottom: '16px',
-          color: 'var(--green-800)', fontSize: '14px', fontWeight: '500',
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          animation: 'fadeIn 0.3s ease'
-        }}>
-          <span>{successMsg}</span>
-          <button onClick={() => setSuccessMsg('')} style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            color: 'var(--green-600)', fontSize: '16px', fontWeight: '700'
-          }}>✕</button>
-        </div>
-      )}
 
       {/* Field Selector */}
       <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
@@ -330,7 +265,7 @@ export default function ManageSchedule() {
             color: 'white', border: 'none', padding: '16px 20px', margin: 0
           }}>
             <h3 style={{ fontFamily: "'Poppins', sans-serif", fontSize: '16px', marginBottom: '4px' }}>
-              ⚽ {currentField.name}
+              {currentField.name}
             </h3>
             <p style={{ opacity: 0.85, fontSize: '13px', marginBottom: '6px' }}>
               {currentField.description || 'Lapangan futsal'}
@@ -339,11 +274,11 @@ export default function ManageSchedule() {
               💰 {formatRupiah(currentField.price_per_hour)}/jam
             </span>
           </div>
-          <div style={{ display: 'flex', gap: '10px' }}>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             {[
-              { label: 'Tersedia', value: weekStats.available, bg: 'var(--green-50)', color: 'var(--green-700)', icon: '✅' },
-              { label: 'Dipesan', value: weekStats.booked, bg: '#eff6ff', color: '#1d4ed8', icon: '📋' },
-              { label: 'Diblokir', value: weekStats.blocked, bg: 'var(--orange-50, #fff7ed)', color: '#c2410c', icon: '🚫' },
+              { label: 'Tersedia', value: weekStats.available, bg: 'var(--green-50)', color: 'var(--green-700)', icon: <CheckCircle2 size={24} /> },
+              { label: 'Dipesan', value: weekStats.booked, bg: 'var(--gray-100)', color: 'var(--gray-600)', icon: <Calendar size={24} /> },
+              { label: 'Diblokir', value: weekStats.blocked, bg: 'var(--orange-50, #fff7ed)', color: '#c2410c', icon: <Ban size={24} /> },
             ].map((s, i) => (
               <div key={i} className="card" style={{
                 padding: '12px 16px', textAlign: 'center', minWidth: '90px',
@@ -390,9 +325,10 @@ export default function ManageSchedule() {
       <div style={{ display: 'flex', gap: '16px', marginBottom: '12px', flexWrap: 'wrap', fontSize: '12px' }}>
         {[
           { label: 'Tersedia', bg: 'var(--green-100)', border: 'var(--green-200)' },
-          { label: 'Sudah Dipesan', bg: '#dbeafe', border: '#bfdbfe' },
-          { label: 'Diblokir', bg: 'var(--orange-100)', border: '#fed7aa' },
-          { label: 'Sudah Lewat', bg: 'var(--gray-100)', border: 'var(--gray-200)' },
+          { label: 'Sudah Dipesan', bg: 'var(--gray-200)', border: 'var(--gray-300)' },
+          { label: 'Istirahat', bg: 'var(--blue-100)', border: '#93c5fd' },
+          { label: 'Maintenance', bg: 'var(--orange-100)', border: '#fed7aa' },
+          { label: 'Event', bg: 'var(--yellow-100)', border: '#fde68a' },
         ].map((l, i) => (
           <span key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span style={{ width: '14px', height: '14px', borderRadius: '4px', background: l.bg, border: `1px solid ${l.border}` }} />
@@ -454,10 +390,10 @@ export default function ManageSchedule() {
                         </td>
                       );
                     }
-                    const style = getSlotStyle(slot.status);
                     return (
                       <td key={dayIdx} style={{ padding: '6px', borderBottom: '1px solid var(--gray-100)' }}>
                         <div
+                          className={`schedule-slot ${getSlotClass(slot.status, slot.reason)}`}
                           onClick={() => handleSlotClick(slot, day.date)}
                           title={
                             slot.status === 'available'
@@ -467,12 +403,10 @@ export default function ManageSchedule() {
                               : 'Sudah lewat'
                           }
                           style={{
-                            textAlign: 'center', fontSize: '13px', padding: '12px 6px',
-                            borderRadius: '8px', transition: 'all 0.2s ease',
-                            fontWeight: '600', ...style,
+                            margin: 0, fontSize: '13px', padding: '12px 6px',
+                            fontWeight: '600',
                             ...( (slot.status === 'booked' || slot.status === 'blocked') ? {
-                              cursor: 'pointer',
-                              ':hover': { transform: 'scale(1.05)' }
+                              cursor: 'pointer'
                             } : {})
                           }}
                           onMouseEnter={e => {
@@ -486,7 +420,7 @@ export default function ManageSchedule() {
                             e.currentTarget.style.boxShadow = 'none';
                           }}
                         >
-                          {getSlotIcon(slot.status)} {slot.start_time}
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>{getSlotIcon(slot.status, slot.reason)} {slot.start_time}</span>
                         </div>
                       </td>
                     );
@@ -498,7 +432,7 @@ export default function ManageSchedule() {
         </div>
       ) : (
         <div className="card" style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--gray-400)' }}>
-          <div style={{ fontSize: '48px', marginBottom: '12px' }}>📅</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}><Calendar size={48} color="#d1d5db" /></div>
           <p style={{ fontSize: '16px', marginBottom: '12px' }}>Belum ada jadwal untuk lapangan ini</p>
           <p style={{ fontSize: '13px' }}>Atur jam operasional terlebih dahulu dengan klik tombol "🕐 Jam Operasional"</p>
         </div>
@@ -552,65 +486,26 @@ export default function ManageSchedule() {
             ))}
           </div>
 
-          <button className="btn btn-primary" style={{ width: '100%', marginTop: '16px' }}
+          <button className="btn btn-primary" style={{ width: '100%', marginTop: '16px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}
             onClick={saveHours} disabled={savingHours}>
             {savingHours ? (
-              <><div className="spinner" style={{ width: '16px', height: '16px', borderWidth: '2px' }}></div> Menyimpan...</>
-            ) : '💾 Simpan Jam Operasional'}
+              <><Loader2 className="animate-spin" size={16} /> Menyimpan...</>
+            ) : <><Save size={16} /> Simpan Jam Operasional</>}
           </button>
         </div>
       </Modal>
 
-      {/* ============= MODAL: Blokir Slot ============= */}
-      <Modal isOpen={showBlockSlot} onClose={() => setShowBlockSlot(false)} title="🚫 Blokir Slot Jadwal">
-        <form onSubmit={handleBlockSlot}>
-          <div style={{
-            background: '#fff7ed', border: '1px solid #fed7aa',
-            borderRadius: '8px', padding: '10px 14px', marginBottom: '16px',
-            fontSize: '13px', color: '#9a3412'
-          }}>
-            ⚠️ Slot yang diblokir tidak bisa dipesan oleh user. Gunakan untuk maintenance, event, atau istirahat.
-          </div>
+      <ConfirmDialog
+        isOpen={confirmDelete.isOpen}
+        title={`Hapus ${confirmDelete.label}?`}
+        description={`Apakah Anda yakin ingin menghapus jadwal ini pada tanggal ${confirmDelete.date} jam ${confirmDelete.slot?.start_time}?`}
+        onConfirm={executeDeleteSlot}
+        onCancel={() => setConfirmDelete({ isOpen: false, slot: null, date: null, label: '' })}
+        type="danger"
+        isLoading={isDeleting}
+      />
 
-          <div className="form-group">
-            <label className="form-label">📅 Tanggal</label>
-            <input type="date" className="form-input" required value={blockForm.date}
-              onChange={e => setBlockForm({ ...blockForm, date: e.target.value })}
-              min={todayStr} />
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <div className="form-group">
-              <label className="form-label">🕐 Jam Mulai</label>
-              <input type="time" className="form-input" required value={blockForm.start_time}
-                onChange={e => setBlockForm({ ...blockForm, start_time: e.target.value })} />
-            </div>
-            <div className="form-group">
-              <label className="form-label">🕐 Jam Selesai</label>
-              <input type="time" className="form-input" required value={blockForm.end_time}
-                onChange={e => setBlockForm({ ...blockForm, end_time: e.target.value })} />
-            </div>
-          </div>
-          <div className="form-group">
-            <label className="form-label">📋 Alasan</label>
-            <select className="form-input" value={blockForm.reason}
-              onChange={e => setBlockForm({ ...blockForm, reason: e.target.value })}>
-              <option value="maintenance">🔧 Maintenance</option>
-              <option value="event">🎉 Event</option>
-              <option value="rest">💤 Istirahat</option>
-            </select>
-          </div>
-          <div className="form-group">
-            <label className="form-label">📝 Deskripsi (opsional)</label>
-            <textarea className="form-input form-textarea" placeholder="Deskripsi tambahan..."
-              value={blockForm.description} onChange={e => setBlockForm({ ...blockForm, description: e.target.value })} />
-          </div>
-          <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={submitting}>
-            {submitting ? (
-              <><div className="spinner" style={{ width: '16px', height: '16px', borderWidth: '2px' }}></div> Memproses...</>
-            ) : '🚫 Blokir Slot'}
-          </button>
-        </form>
-      </Modal>
+
     </div>
   );
 }

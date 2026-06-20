@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import axios from 'axios';
 import { isLoggedIn, isAdmin } from './utils/auth';
+import { Toaster, toast } from 'react-hot-toast';
 
 // Layouts
 import UserLayout from './components/UserLayout';
@@ -139,7 +140,7 @@ function FutsalLogin() {
 
     // Validate email must be @gmail.com
     if (!email.toLowerCase().endsWith('@gmail.com')) {
-      return alert('Email harus menggunakan format @gmail.com!');
+      return toast.error('Email harus menggunakan format @gmail.com!');
     }
 
     setLoading(true);
@@ -158,18 +159,18 @@ function FutsalLogin() {
           window.location.href = '/schedule';
         }
       } else {
-        if (password !== confirmPassword) { setLoading(false); return alert("Password tidak cocok!"); }
+        if (password !== confirmPassword) { setLoading(false); return toast.error("Password tidak cocok!"); }
         await axios.post("/api/register", {
           name, email, password,
           password_confirmation: confirmPassword,
           phone
         });
-        alert("Registrasi berhasil! Silakan login ✅");
+        toast.success("Registrasi berhasil! Silakan login");
         setMode("login");
       }
     } catch (err) {
       console.error(err);
-      alert(err.response?.data?.message || "Koneksi Error: Periksa terminal Laravel!");
+      toast.error(err.response?.data?.message || "Koneksi Error: Periksa terminal Laravel!");
     } finally {
       setLoading(false);
     }
@@ -414,6 +415,14 @@ function FutsalLogin() {
 export default function App() {
   return (
     <BrowserRouter>
+      <Toaster 
+        position="top-right" 
+        toastOptions={{ 
+          duration: 3500,
+          success: { style: { borderLeft: '4px solid #16a34a' } },
+          error: { style: { borderLeft: '4px solid #dc2626' } },
+        }} 
+      />
       <Routes>
         {/* Login / Register */}
         <Route path="/" element={<FutsalLogin />} />

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api, { downloadPdf } from '../../api/axios';
 import { formatRupiah, formatDate, BOOKING_STATUS, PAYMENT_STATUS, PAYMENT_METHODS } from '../../utils/auth';
+import { ArrowLeft, ClipboardList, CreditCard, Download, Calendar, CircleDot } from 'lucide-react';
 
 export default function BookingDetail() {
   const navigate = useNavigate();
@@ -55,7 +56,9 @@ export default function BookingDetail() {
       <button onClick={() => navigate('/bookings')} style={{
         background: 'none', border: 'none', color: 'var(--green-700)', cursor: 'pointer',
         fontSize: '14px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '16px'
-      }}>← Kembali ke Riwayat</button>
+      }}>
+        <ArrowLeft size={16} /> Kembali ke Riwayat
+      </button>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
         <h1 style={{ fontFamily: "'Poppins', sans-serif", fontSize: '24px', fontWeight: '700', color: 'var(--green-900)' }}>
@@ -67,8 +70,8 @@ export default function BookingDetail() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }} className="two-col">
         {/* Booking Info */}
         <div className="card">
-          <h3 style={{ fontFamily: "'Poppins', sans-serif", fontSize: '16px', fontWeight: '600', color: 'var(--green-800)', marginBottom: '16px' }}>
-            ⚽ Informasi Booking
+          <h3 style={{ fontFamily: "'Poppins', sans-serif", fontSize: '16px', fontWeight: '600', color: 'var(--green-800)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <ClipboardList size={18} color="#3b82f6" /> Informasi Booking
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '14px' }}>
             {[
@@ -97,8 +100,8 @@ export default function BookingDetail() {
 
         {/* Payment Info */}
         <div className="card">
-          <h3 style={{ fontFamily: "'Poppins', sans-serif", fontSize: '16px', fontWeight: '600', color: 'var(--green-800)', marginBottom: '16px' }}>
-            💳 Informasi Pembayaran
+          <h3 style={{ fontFamily: "'Poppins', sans-serif", fontSize: '16px', fontWeight: '600', color: 'var(--green-800)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <CreditCard size={18} color="#8b5cf6" /> Informasi Pembayaran
           </h3>
           {booking.payment ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '14px' }}>
@@ -146,7 +149,7 @@ export default function BookingDetail() {
             </div>
           ) : (
             <div style={{ textAlign: 'center', padding: '30px', color: 'var(--gray-400)' }}>
-              <div style={{ fontSize: '36px', marginBottom: '8px' }}>💳</div>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}><CreditCard size={36} color="#d1d5db" /></div>
               <p>Belum ada data pembayaran</p>
             </div>
           )}
@@ -155,8 +158,12 @@ export default function BookingDetail() {
 
       {/* Actions */}
       <div style={{ display: 'flex', gap: '12px', marginTop: '24px', justifyContent: 'center', flexWrap: 'wrap' }}>
-        <button className="btn btn-primary" onClick={() => downloadPdf(booking.id)}>📄 Download PDF</button>
-        <button className="btn btn-outline" onClick={() => navigate('/schedule')}>📅 Booking Lagi</button>
+        <button className="btn btn-primary" onClick={() => downloadPdf(booking.id)} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Download size={16} color="#ffffff" /> Download PDF
+        </button>
+        <button className="btn btn-outline" onClick={() => navigate('/schedule')} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Calendar size={16} color="#15803d" /> Booking Lagi
+        </button>
       </div>
     </div>
   );

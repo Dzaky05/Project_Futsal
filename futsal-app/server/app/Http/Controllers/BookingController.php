@@ -22,8 +22,8 @@ class BookingController extends Controller
             'start_time' => 'required|date_format:H:i',
             'end_time' => 'required|date_format:H:i|after:start_time',
             'notes' => 'nullable|string',
-            'payment_method' => 'required|in:transfer_bca,transfer_mandiri,transfer_bri,qris,cash',
-            'payment_proof' => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:5120',
+            'payment_method' => 'required|string',
+            'payment_proof' => 'required_unless:payment_method,cash|nullable|file|mimes:jpeg,png,jpg,pdf|max:5120',
             'payment_notes' => 'nullable|string',
             'is_deposit' => 'nullable|boolean',
         ]);
@@ -76,17 +76,27 @@ class BookingController extends Controller
                 $proofPath = $request->file('payment_proof')->store('payment_proofs', 'public');
             }
 
+            // Setup midtrans config
+            \Midtrans\Config::$serverKey = config('services.midtrans.server_key');
+            \Midtrans\Config::$isProduction = config('services.midtrans.is_production');
+            \Midtrans\Config::$isSanitized = true;
+            \Midtrans\Config::$is3ds = true;
+
             $isDeposit = $request->boolean('is_deposit');
             $depositAmount = $isDeposit ? round($totalPrice * 0.5, 2) : $totalPrice;
             $remainingAmount = round($totalPrice - $depositAmount, 2);
 
-            // Create payment
-            $paymentStatus = 'menunggu_verifikasi';
+            // Jika metode adalah cash, itu berarti pembayaran DP via Midtrans
+            $isMidtrans = ($request->payment_method === 'cash');
+
+            $paymentStatus = $isMidtrans ? 'pending' : 'menunggu_verifikasi';
             $paymentNotes = $request->payment_notes;
 
             if ($isDeposit) {
                 $paymentNotes = trim(($paymentNotes ? $paymentNotes . '\n' : '') . 'DP 50%: pelunasan sisa tagihan dilakukan tunai di lokasi.');
             }
+            
+            $midtransOrderId = $isMidtrans ? 'FUTSAL-' . uniqid() : null;
 
             $payment = Payment::create([
                 'booking_id' => $booking->id,
@@ -100,7 +110,27 @@ class BookingController extends Controller
                 'is_deposit' => $isDeposit,
                 'deposit_amount' => $isDeposit ? $depositAmount : null,
                 'remaining_amount' => $isDeposit ? $remainingAmount : 0,
+                'midtrans_order_id' => $midtransOrderId,
             ]);
+
+            $snapToken = null;
+
+            if ($isMidtrans) {
+                // Midtrans Params
+                $params = array(
+                    'transaction_details' => array(
+                        'order_id' => $midtransOrderId,
+                        'gross_amount' => $depositAmount,
+                    ),
+                    'customer_details' => array(
+                        'first_name' => $request->user()->name,
+                        'email' => $request->user()->email,
+                    ),
+                );
+
+                $snapToken = \Midtrans\Snap::getSnapToken($params);
+                $payment->update(['snap_token' => $snapToken]);
+            }
 
             DB::commit();
 
@@ -113,8 +143,9 @@ class BookingController extends Controller
             }
 
             return response()->json([
-                'message' => 'Pemesanan berhasil dibuat! Menunggu verifikasi admin.',
+                'message' => $isMidtrans ? 'Pemesanan berhasil dibuat! Silakan selesaikan pembayaran.' : 'Pemesanan berhasil dibuat! Menunggu verifikasi admin.',
                 'booking' => $booking,
+                'snap_token' => $snapToken
             ], 201);
 
         } catch (\Exception $e) {
@@ -128,6 +159,8 @@ class BookingController extends Controller
 
     public function index(Request $request)
     {
+        Booking::autoUpdateCompletedStatuses();
+
         $user = $request->user();
         $query = Booking::with(['field', 'user', 'payment']);
 
@@ -164,6 +197,8 @@ class BookingController extends Controller
 
     public function show(Request $request, $id)
     {
+        Booking::autoUpdateCompletedStatuses();
+
         $booking = Booking::with(['field', 'user', 'payment.verifier'])->findOrFail($id);
 
         // Users can only see their own bookings
@@ -206,6 +241,8 @@ class BookingController extends Controller
 
     public function todayStats()
     {
+        Booking::autoUpdateCompletedStatuses();
+
         $today = Carbon::today();
 
         return response()->json([
@@ -231,6 +268,8 @@ class BookingController extends Controller
      */
     public function adminStats()
     {
+        Booking::autoUpdateCompletedStatuses();
+
         $today = Carbon::today();
 
         return response()->json([

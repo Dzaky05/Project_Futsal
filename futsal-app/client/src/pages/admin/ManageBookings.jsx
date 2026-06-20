@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import api from '../../api/axios';
+import api, { downloadPdf } from '../../api/axios';
 import { formatRupiah, formatDateShort, BOOKING_STATUS, PAYMENT_STATUS } from '../../utils/auth';
 import Modal from '../../components/Modal';
+import ConfirmDialog from '../../components/ConfirmDialog';
+import { toast } from 'react-hot-toast';
+import { CheckCircle, XCircle, Info, Loader2, Download } from 'lucide-react';
 
 export default function ManageBookings() {
   const [bookings, setBookings] = useState([]);
@@ -9,6 +12,8 @@ export default function ManageBookings() {
   const [filter, setFilter] = useState('all');
   const [selected, setSelected] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [confirmData, setConfirmData] = useState({ isOpen: false, id: null, status: null });
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const fetchBookings = () => {
     setLoading(true);
@@ -28,17 +33,27 @@ export default function ManageBookings() {
       });
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchBookings(); }, [filter]);
 
-  const updateStatus = async (id, status) => {
-    if (!window.confirm(`Ubah status ke "${BOOKING_STATUS[status]?.label || status}"?`)) return;
+  const handleUpdateClick = (id, status) => {
+    setConfirmData({ isOpen: true, id, status });
+  };
+
+  const executeUpdateStatus = async () => {
+    const { id, status } = confirmData;
+    setIsUpdating(true);
     try {
       await api.put(`/admin/bookings/${id}/status`, { status });
+      toast.success('Status berhasil diupdate');
       fetchBookings();
       setShowModal(false);
       setSelected(null);
+      setConfirmData({ isOpen: false, id: null, status: null });
     } catch (err) {
-      alert(err.response?.data?.message || 'Gagal update status');
+      toast.error(err.response?.data?.message || 'Gagal update status');
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -67,7 +82,7 @@ export default function ManageBookings() {
       </div>
 
       {loading ? (
-        <div className="loading-center"><div className="spinner"></div></div>
+        <div className="loading-center"><Loader2 className="animate-spin text-green-600" size={40} /></div>
       ) : (
         <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
           <div style={{ overflowX: 'auto' }}>
@@ -109,7 +124,9 @@ export default function ManageBookings() {
                       </td>
                       <td>
                         <div style={{ display: 'flex', gap: '6px' }}>
-                          <button className="btn btn-outline btn-sm" onClick={() => { setSelected(b); setShowModal(true); }}>Detail</button>
+                          <button className="btn btn-outline btn-sm" onClick={() => { setSelected(b); setShowModal(true); }} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Info size={14} /> Detail
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -147,18 +164,31 @@ export default function ManageBookings() {
               ))}
             </div>
             <div style={{ borderTop: '1px solid var(--gray-200)', paddingTop: '16px' }}>
-              <p style={{ fontSize: '13px', fontWeight: '600', marginBottom: '10px' }}>Ubah Status:</p>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <p style={{ fontSize: '13px', fontWeight: '600', margin: 0 }}>Ubah Status:</p>
+                <button className="btn btn-outline btn-sm" onClick={() => downloadPdf(selected.id)} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Download size={14} /> Cetak PDF
+                </button>
+              </div>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 {selected.status === 'pending' && (
                   <>
-                    <button className="btn btn-primary btn-sm" onClick={() => updateStatus(selected.id, 'confirmed')}>✅ Konfirmasi</button>
-                    <button className="btn btn-danger btn-sm" onClick={() => updateStatus(selected.id, 'cancelled')}>❌ Batalkan</button>
+                    <button className="btn btn-primary btn-sm" onClick={() => handleUpdateClick(selected.id, 'confirmed')} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <CheckCircle size={14} /> Konfirmasi
+                    </button>
+                    <button className="btn btn-danger btn-sm" onClick={() => handleUpdateClick(selected.id, 'cancelled')} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <XCircle size={14} /> Batalkan
+                    </button>
                   </>
                 )}
                 {selected.status === 'confirmed' && (
                   <>
-                    <button className="btn btn-primary btn-sm" onClick={() => updateStatus(selected.id, 'completed')}>✅ Selesai</button>
-                    <button className="btn btn-danger btn-sm" onClick={() => updateStatus(selected.id, 'cancelled')}>❌ Batalkan</button>
+                    <button className="btn btn-primary btn-sm" onClick={() => handleUpdateClick(selected.id, 'completed')} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <CheckCircle size={14} /> Selesai
+                    </button>
+                    <button className="btn btn-danger btn-sm" onClick={() => handleUpdateClick(selected.id, 'cancelled')} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <XCircle size={14} /> Batalkan
+                    </button>
                   </>
                 )}
                 {(selected.status === 'completed' || selected.status === 'cancelled') && (
@@ -169,6 +199,16 @@ export default function ManageBookings() {
           </div>
         )}
       </Modal>
+
+      <ConfirmDialog
+        isOpen={confirmData.isOpen}
+        title="Ubah Status Booking?"
+        description={`Anda yakin ingin mengubah status menjadi "${confirmData.status ? BOOKING_STATUS[confirmData.status]?.label : ''}"?`}
+        onConfirm={executeUpdateStatus}
+        onCancel={() => setConfirmData({ isOpen: false, id: null, status: null })}
+        type="danger"
+        isLoading={isUpdating}
+      />
     </div>
   );
 }

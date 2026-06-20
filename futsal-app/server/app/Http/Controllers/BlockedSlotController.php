@@ -9,7 +9,8 @@ class BlockedSlotController extends Controller
 {
     public function index(Request $request)
     {
-        $query = BlockedSlot::with(['field', 'creator']);
+        $query = BlockedSlot::with(['field', 'creator'])
+            ->where('date', '>=', now()->toDateString());
 
         if ($request->has('field_id')) {
             $query->where('field_id', $request->field_id);

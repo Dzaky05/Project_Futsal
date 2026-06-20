@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { getUser, clearAuth } from '../utils/auth';
+import { Calendar, ClipboardList, User as UserIcon, LogOut } from 'lucide-react';
 
 export default function UserLayout({ children }) {
   const navigate = useNavigate();
@@ -10,9 +11,9 @@ export default function UserLayout({ children }) {
   const [profileOpen, setProfileOpen] = useState(false);
 
   const navLinks = [
-    { path: '/schedule', label: '📅 Jadwal', icon: '📅' },
-    { path: '/bookings', label: '📋 Riwayat Booking', icon: '📋' },
-    { path: '/profile', label: '👤 Profil Saya', icon: '👤' },
+    { path: '/schedule', label: 'Jadwal', icon: <Calendar size={18} color="#10b981" /> },
+    { path: '/bookings', label: 'Riwayat Booking', icon: <ClipboardList size={18} color="#3b82f6" /> },
+    { path: '/profile', label: 'Profil Saya', icon: <UserIcon size={18} color="#8b5cf6" /> },
   ];
 
   const handleLogout = () => {
@@ -62,8 +63,9 @@ export default function UserLayout({ children }) {
               key={link.path}
               className={`nav-link ${location.pathname === link.path ? 'active' : ''}`}
               onClick={() => { navigate(link.path); setMenuOpen(false); }}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
             >
-              {link.label}
+              {link.icon} {link.label}
             </button>
           ))}
         </div>
@@ -113,7 +115,7 @@ export default function UserLayout({ children }) {
                 onMouseEnter={e => e.currentTarget.style.background = 'var(--green-50)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'none'}
               >
-                👤 Profil Saya
+                <UserIcon size={16} color="#8b5cf6" /> Profil Saya
               </button>
               <button
                 onClick={handleLogout}
@@ -126,7 +128,7 @@ export default function UserLayout({ children }) {
                 onMouseEnter={e => e.currentTarget.style.background = 'var(--red-100)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'none'}
               >
-                🚪 Logout
+                <LogOut size={16} color="#ef4444" /> Logout
               </button>
             </div>
           )}

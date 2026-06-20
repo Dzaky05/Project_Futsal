@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../api/axios';
+import { Key } from 'lucide-react';
 
 export default function ResetPassword() {
   const navigate = useNavigate();
@@ -49,7 +50,9 @@ export default function ResetPassword() {
     <div style={{ minHeight: '100vh', background: 'linear-gradient(145deg, #dcfce7 0%, #f0fdf4 30%, #ffffff 60%, #bbf7d0 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', fontFamily: "'Inter', sans-serif" }}>
       <div className="auth-card" style={{ width: '100%', maxWidth: '420px', background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(24px)', borderRadius: '22px', border: '1.5px solid rgba(134,239,172,0.4)', boxShadow: '0 8px 40px rgba(22,163,74,0.12)', padding: '32px' }}>
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '60px', height: '60px', borderRadius: '18px', background: 'rgba(22,163,74,0.15)', margin: '0 auto 12px', fontSize: '28px' }}>🔑</div>
+          <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '60px', height: '60px', borderRadius: '18px', background: 'rgba(22,163,74,0.15)', margin: '0 auto 12px', color: '#16a34a' }}>
+            <Key size={28} />
+          </div>
           <h1 style={{ fontFamily: "'Poppins', sans-serif", fontSize: '22px', fontWeight: '700', color: '#14532d' }}>Reset Password</h1>
           <p style={{ fontSize: '13px', color: '#4b5563', marginTop: '8px' }}>Masukkan password baru untuk akun Anda.</p>
         </div>

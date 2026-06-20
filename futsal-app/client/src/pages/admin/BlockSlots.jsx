@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api/axios';
 import Modal from '../../components/Modal';
+import ConfirmDialog from '../../components/ConfirmDialog';
+import { toast } from 'react-hot-toast';
+import { Ban, Plus, Trash2, CheckCircle2, Wrench, Calendar, Coffee, Loader2 } from 'lucide-react';
 
 export default function BlockSlots() {
   const [fields, setFields] = useState([]);
@@ -11,6 +14,9 @@ export default function BlockSlots() {
   const [formData, setFormData] = useState({
     date: '', start_time: '', end_time: '', reason: 'maintenance', description: ''
   });
+  const [confirmData, setConfirmData] = useState({ isOpen: false, id: null });
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     api.get('/fields').then(res => {
@@ -32,31 +38,50 @@ export default function BlockSlots() {
       .catch(() => setLoading(false));
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchBlocked(); }, [selectedField]);
 
   const handleAdd = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
     try {
       await api.post('/admin/blocked-slots', { ...formData, field_id: selectedField });
+      toast.success('Blokir berhasil ditambahkan');
       setShowAdd(false);
       setFormData({ date: '', start_time: '', end_time: '', reason: 'maintenance', description: '' });
       fetchBlocked();
     } catch (err) {
-      alert(err.response?.data?.message || 'Gagal menambahkan blokir');
+      toast.error(err.response?.data?.message || 'Gagal menambahkan blokir');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Hapus blokir ini?')) return;
+  const handleDeleteClick = (id) => {
+    setConfirmData({ isOpen: true, id });
+  };
+
+  const executeDelete = async () => {
+    const { id } = confirmData;
+    setIsDeleting(true);
     try {
       await api.delete(`/admin/blocked-slots/${id}`);
+      toast.success('Blokir berhasil dihapus');
       fetchBlocked();
+      setConfirmData({ isOpen: false, id: null });
     } catch (err) {
-      alert(err.response?.data?.message || 'Gagal menghapus');
+      toast.error(err.response?.data?.message || 'Gagal menghapus');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
-  const reasonLabels = { maintenance: '🔧 Maintenance', event: '🎉 Event', rest: '💤 Istirahat' };
+  const reasonIcons = { 
+    maintenance: <Wrench size={14} />, 
+    event: <Calendar size={14} />, 
+    rest: <Coffee size={14} /> 
+  };
+  const reasonLabels = { maintenance: 'Maintenance', event: 'Event', rest: 'Istirahat' };
   const reasonColors = {
     maintenance: { bg: 'var(--orange-100)', color: 'var(--orange-500)' },
     event: { bg: 'var(--yellow-100)', color: 'var(--yellow-500)' },
@@ -67,12 +92,14 @@ export default function BlockSlots() {
     <div className="fade-in">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h1 style={{ fontFamily: "'Poppins', sans-serif", fontSize: '24px', fontWeight: '700', color: 'var(--green-900)' }}>
-            🚫 Blokir Jadwal
+          <h1 style={{ fontFamily: "'Poppins', sans-serif", fontSize: '24px', fontWeight: '700', color: 'var(--green-900)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Ban color="#f87171" size={28} /> Blokir Jadwal
           </h1>
           <p style={{ color: 'var(--gray-500)', fontSize: '14px', marginTop: '4px' }}>Blokir slot untuk maintenance, event, atau istirahat</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowAdd(true)}>+ Tambah Blokir</button>
+        <button className="btn btn-primary" onClick={() => setShowAdd(true)} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Plus size={16} /> Tambah Blokir
+        </button>
       </div>
 
       <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
@@ -85,10 +112,12 @@ export default function BlockSlots() {
       </div>
 
       {loading ? (
-        <div className="loading-center"><div className="spinner"></div></div>
+        <div className="loading-center"><Loader2 className="animate-spin text-green-600" size={40} /></div>
       ) : blockedSlots.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: '60px', color: 'var(--gray-400)' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>✅</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+            <CheckCircle2 size={48} color="#22c55e" style={{ opacity: 0.5 }} />
+          </div>
           <p style={{ fontSize: '16px' }}>Tidak ada slot yang diblokir</p>
         </div>
       ) : (
@@ -98,11 +127,13 @@ export default function BlockSlots() {
             return (
               <div key={slot.id} className="card" style={{ padding: '16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                  <span className="badge" style={{ background: rc.bg, color: rc.color }}>
-                    {reasonLabels[slot.reason] || slot.reason}
+                  <span className="badge" style={{ background: rc.bg, color: rc.color, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    {reasonIcons[slot.reason] || <Wrench size={14} />} {reasonLabels[slot.reason] || slot.reason}
                   </span>
-                  <button className="btn btn-danger btn-sm" onClick={() => handleDelete(slot.id)}
-                    style={{ padding: '4px 10px', fontSize: '11px' }}>✕ Hapus</button>
+                  <button className="btn btn-danger btn-sm" onClick={() => handleDeleteClick(slot.id)}
+                    style={{ padding: '4px 10px', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Trash2 size={14} /> Hapus
+                  </button>
                 </div>
                 <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--gray-800)', marginBottom: '6px' }}>
                   {slot.field?.name || 'Lapangan'}
@@ -147,9 +178,9 @@ export default function BlockSlots() {
             <label className="form-label">Alasan</label>
             <select className="form-input" value={formData.reason}
               onChange={e => setFormData({ ...formData, reason: e.target.value })}>
-              <option value="maintenance">🔧 Maintenance</option>
-              <option value="event">🎉 Event</option>
-              <option value="rest">💤 Istirahat</option>
+              <option value="maintenance">Maintenance</option>
+              <option value="event">Event</option>
+              <option value="rest">Istirahat</option>
             </select>
           </div>
           <div className="form-group">
@@ -157,9 +188,21 @@ export default function BlockSlots() {
             <textarea className="form-input form-textarea" placeholder="Deskripsi tambahan..."
               value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} />
           </div>
-          <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>🚫 Blokir Slot</button>
+          <button type="submit" disabled={isSubmitting} className="btn btn-primary" style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
+            {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <Ban size={18} />} Blokir Slot
+          </button>
         </form>
       </Modal>
+
+      <ConfirmDialog
+        isOpen={confirmData.isOpen}
+        title="Hapus Blokir Jadwal?"
+        description="Apakah Anda yakin ingin menghapus blokir jadwal ini? Slot akan kembali tersedia untuk dibooking."
+        onConfirm={executeDelete}
+        onCancel={() => setConfirmData({ isOpen: false, id: null })}
+        type="danger"
+        isLoading={isDeleting}
+      />
     </div>
   );
 }

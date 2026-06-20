@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
+import Modal from '../../components/Modal';
+import { Calendar, CircleDot, ArrowLeft, ArrowRight, RotateCcw, Image as ImageIcon } from 'lucide-react';
 
 export default function Schedule() {
   const navigate = useNavigate();
@@ -9,6 +11,7 @@ export default function Schedule() {
   const [weekOffset, setWeekOffset] = useState(0);
   const [schedule, setSchedule] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [previewImage, setPreviewImage] = useState(null);
 
   useEffect(() => {
     api.get('/fields').then(res => {
@@ -114,8 +117,8 @@ export default function Schedule() {
     <div className="fade-in">
       {/* Header */}
       <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontFamily: "'Poppins', sans-serif", fontSize: '24px', fontWeight: '700', color: 'var(--green-900)' }}>
-          📅 Jadwal Lapangan
+        <h1 style={{ fontFamily: "'Poppins', sans-serif", fontSize: '24px', fontWeight: '700', color: 'var(--green-900)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Calendar color="#10b981" size={28} /> Jadwal Lapangan
         </h1>
         <p style={{ color: 'var(--gray-500)', fontSize: '14px', marginTop: '4px' }}>
           Pilih lapangan dan lihat jadwal ketersediaan
@@ -143,24 +146,37 @@ export default function Schedule() {
           padding: '16px'
         }}>
           {currentField.image && (
-            <div style={{ width: '140px', minWidth: '100px', maxHeight: '100px', overflow: 'hidden', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.15)' }}>
+            <div 
+              onClick={() => setPreviewImage(`http://127.0.0.1:8000/storage/${currentField.image}`)}
+              style={{ 
+                width: '140px', minWidth: '100px', maxHeight: '100px', overflow: 'hidden', 
+                borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.15)', cursor: 'pointer', position: 'relative' 
+              }}>
               <img
                 src={`http://127.0.0.1:8000/storage/${currentField.image}`}
                 alt={currentField.name}
-                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform 0.3s' }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.05)'; e.currentTarget.nextElementSibling.style.opacity = '1'; }} 
+                onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.nextElementSibling.style.opacity = '0'; }}
               />
+              <div style={{
+                position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.3)',
+                display: 'flex', justifyContent: 'center', alignItems: 'center', opacity: 0, transition: 'opacity 0.3s', pointerEvents: 'none'
+              }}>
+                <ImageIcon color="white" size={24} />
+              </div>
             </div>
           )}
             <div style={{ flex: 1, minWidth: '150px' }}>
-            <h3 style={{ fontFamily: "'Poppins', sans-serif", fontSize: '16px', marginBottom: '4px' }}>
-              ⚽ {currentField.name}
+            <h3 style={{ fontFamily: "'Poppins', sans-serif", fontSize: '16px', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <CircleDot size={16} /> {currentField.name}
             </h3>
             <p style={{ opacity: 0.85, fontSize: '12px', marginBottom: '6px' }}>
               {currentField.description || 'Lapangan futsal berkualitas'}
             </p>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               <span style={{ fontSize: '12px', opacity: 0.9 }}>
-                💰 Rp {Number(currentField.price_per_hour).toLocaleString('id-ID')}/jam
+                Rp {Number(currentField.price_per_hour).toLocaleString('id-ID')}/jam
               </span>
               {getFacilities(currentField).map((f, i) => (
                 <span key={i} style={{ fontSize: '11px', opacity: 0.8, background: 'rgba(255,255,255,0.15)', padding: '2px 8px', borderRadius: '10px' }}>
@@ -181,7 +197,7 @@ export default function Schedule() {
             style={{ padding: '6px 10px', fontSize: '18px', minWidth: '40px', lineHeight: 1 }}
             title="Minggu Lalu"
           >
-            ←
+            <ArrowLeft size={16} />
           </button>
           <div style={{ textAlign: 'center', flex: 1, minWidth: 0 }}>
             <span style={{ fontWeight: '600', color: 'var(--green-800)', fontSize: '13px', lineHeight: '1.3', display: 'block' }}>
@@ -195,7 +211,7 @@ export default function Schedule() {
                   color: 'var(--green-600)', cursor: 'pointer', fontSize: '11px', fontWeight: '500'
                 }}
               >
-                ↻ Minggu Ini
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'center' }}><RotateCcw size={12} /> Minggu Ini</span>
               </button>
             )}
           </div>
@@ -205,7 +221,7 @@ export default function Schedule() {
             style={{ padding: '6px 10px', fontSize: '18px', minWidth: '40px', lineHeight: 1 }}
             title="Minggu Depan"
           >
-            →
+            <ArrowRight size={16} />
           </button>
         </div>
       </div>
@@ -295,10 +311,18 @@ export default function Schedule() {
         </div>
       ) : (
         <div className="card" style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--gray-400)' }}>
-          <div style={{ fontSize: '40px', marginBottom: '12px' }}>📅</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}><Calendar size={40} color="#d1d5db" /></div>
           <p>Belum ada jadwal tersedia untuk lapangan ini</p>
         </div>
       )}
+
+      <Modal isOpen={!!previewImage} onClose={() => setPreviewImage(null)} title="Foto Lapangan">
+        {previewImage && (
+          <div style={{ padding: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+            <img src={previewImage} alt="Preview Lapangan" style={{ maxWidth: '100%', maxHeight: '70vh', borderRadius: '12px', objectFit: 'contain' }} />
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

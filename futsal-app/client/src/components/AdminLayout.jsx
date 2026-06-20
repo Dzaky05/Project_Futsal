@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { clearAuth } from '../utils/auth';
+import { LayoutDashboard, Calendar, ClipboardList, CreditCard, CircleDot, Ban, TrendingUp, LogOut } from 'lucide-react';
 
 export default function AdminLayout({ children }) {
   const navigate = useNavigate();
@@ -8,13 +9,13 @@ export default function AdminLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const navItems = [
-    { path: '/admin/dashboard', label: 'Dashboard', icon: '📊' },
-    { path: '/admin/schedule', label: 'Kelola Jadwal', icon: '📅' },
-    { path: '/admin/bookings', label: 'Kelola Booking', icon: '📋' },
-    { path: '/admin/payments', label: 'Verifikasi Pembayaran', icon: '💳' },
-    { path: '/admin/fields', label: 'Kelola Lapangan', icon: '⚽' },
-    { path: '/admin/block-slots', label: 'Blokir Jadwal', icon: '🚫' },
-    { path: '/admin/reports', label: 'Laporan Keuangan', icon: '📈' },
+    { path: '/admin/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} color="#60a5fa" /> },
+    { path: '/admin/schedule', label: 'Kelola Jadwal', icon: <Calendar size={20} color="#34d399" /> },
+    { path: '/admin/bookings', label: 'Kelola Booking', icon: <ClipboardList size={20} color="#fbbf24" /> },
+    { path: '/admin/payments', label: 'Verifikasi Pembayaran', icon: <CreditCard size={20} color="#a78bfa" /> },
+    { path: '/admin/fields', label: 'Kelola Lapangan', icon: <CircleDot size={20} color="#f472b6" /> },
+    { path: '/admin/block-slots', label: 'Blokir Jadwal', icon: <Ban size={20} color="#f87171" /> },
+    { path: '/admin/reports', label: 'Laporan Keuangan', icon: <TrendingUp size={20} color="#2dd4bf" /> },
   ];
 
   const handleLogout = () => {
@@ -52,14 +53,14 @@ export default function AdminLayout({ children }) {
               className={`nav-item ${location.pathname === item.path ? 'active' : ''}`}
               onClick={() => { navigate(item.path); setSidebarOpen(false); }}
             >
-              <span style={{ fontSize: '18px' }}>{item.icon}</span>
+              <span style={{ display: 'flex', alignItems: 'center' }}>{item.icon}</span>
               {item.label}
             </button>
           ))}
         </nav>
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', padding: '16px 0', marginTop: 'auto' }}>
           <button className="nav-item" onClick={handleLogout} style={{ color: '#fca5a5' }}>
-            <span style={{ fontSize: '18px' }}>🚪</span>
+            <span style={{ display: 'flex', alignItems: 'center' }}><LogOut size={20} color="#fca5a5" /></span>
             Logout
           </button>
         </div>

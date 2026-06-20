@@ -2,7 +2,7 @@
 
 Aplikasi web FutsalGo yang dibangun menggunakan stack Laravel (Backend) dan React (Frontend) dengan tema Hijau-Putih telah mencapai progres yang sangat baik. Berikut adalah rincian fitur yang telah diselesaikan dan fitur yang masih tersisa/belum diimplementasikan secara penuh.
 
-## ✅ FITUR YANG SUDAH SELESAI DAN BERJALAN BAIK
+## FITUR YANG SUDAH SELESAI DAN BERJALAN BAIK
 
 ### 1. Sisi Pengguna (User Side)
 * **Login & Registrasi:**
@@ -60,7 +60,7 @@ Aplikasi web FutsalGo yang dibangun menggunakan stack Laravel (Backend) dan Reac
 
 ---
 
-## ⚡ FITUR YANG BARU SAJA DITAMBAHKAN / DISESUAIKAN
+##  FITUR YANG BARU SAJA DITAMBAHKAN / DISESUAIKAN
 
 1. **Kelola Jadwal Lanjutan (Admin):**
    * Perubahan konsep dari *global setting* menjadi per minggu (spesifik tanggal).
@@ -83,10 +83,26 @@ Aplikasi web FutsalGo yang dibangun menggunakan stack Laravel (Backend) dan Reac
    * Mengirim notifikasi (misal WhatsApp atau in-app) beberapa jam sebelum waktu sewa lapangan dimulai.
 9. **Sistem Deposit atau DP:**
    * Menambahkan fitur pembayaran sebagian (DP) untuk mengamankan slot, dan pelunasan sisanya secara tunai di lokasi.
+10. **Penyempurnaan Kelola Lapangan (Hapus & Galeri):**
+    * Menambahkan fitur **Hapus Lapangan** beserta *Pop-up Confirmation* (Dialog peringatan) untuk menghapus data lapangan beserta jadwal dan booking terkait secara aman.
+    * Menambahkan *Highlight Foto Lapangan* di bagian atas kartu pada halaman Jadwal (User) dan Kelola Lapangan (Admin).
+    * Menambahkan fitur *Full-Screen Image Modal* (Klik foto untuk memperbesar dengan efek *zoom* saat *hover*).
+11. **Perbaikan Sistem Upload Gambar & Storage:**
+    * Memperbaiki bug *broken link* pada gambar lapangan dengan menghubungkan folder penyimpanan lokal ke publik (`php artisan storage:link`).
+    * Memperbaiki logika API *upload image*, sehingga gambar kini dapat dipastikan tersimpan sempurna di server.
+    * Menambahkan filter tipe file di *file picker* (khusus JPG, JPEG, PNG) serta perbaikan logika *error handling* (*toast success* tidak akan muncul jika format file salah).
+12. **Otomatisasi Status Booking & Fitur Cetak:**
+    * Status pemesanan kini **otomatis** berubah menjadi "Dikonfirmasi" ketika Admin menekan tombol "Terima (Lunas)" pada menu verifikasi pembayaran.
+    * Memperbaiki bug otentikasi saat Admin mencoba mengunduh PDF Laporan Keuangan (*Internal Server Error*).
+    * Menambahkan tombol Cetak PDF khusus untuk Admin di setiap baris detail pesanan pada menu "Kelola Booking".
+13. **Penyempurnaan UI Secara Global:**
+    * Mengganti sistem *alert* `window.confirm()` kuno menjadi `ConfirmDialog` dan `react-hot-toast` yang jauh lebih elegan di seluruh halaman aplikasi.
+    * Mengganti seluruh *emoji* berbasis teks menjadi *Icon SVG* (Lucide React) dengan pewarnaan yang seragam dan profesional.
+    * Memperbaiki masalah Modal (*Pop-up*) yang kadang tertutup oleh *Navbar* dengan implementasi CSS tingkat tinggi agar selalu berada di tengah (*center*).
 
 ---
 
-## ⏳ FITUR YANG MASIH HARUS DIPERBAIKI / DITAMBAHKAN (TODO)
+ ## FITUR YANG Di Pertimbangkan untuk di Tambahkan
 
 1. **Integrasi Payment Gateway Otomatis (Opsional):**
    * Beralih dari verifikasi manual/transfer ke *Payment Gateway* seperti Midtrans agar status *booking* langsung "Confirmed" seketika pelanggan membayar.

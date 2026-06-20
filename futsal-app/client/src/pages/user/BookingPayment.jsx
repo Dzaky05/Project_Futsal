@@ -4,6 +4,8 @@ import QRCode from 'qrcode';
 import api, { downloadPdf } from '../../api/axios';
 import { formatRupiah, PAYMENT_METHODS } from '../../utils/auth';
 import Modal from '../../components/Modal';
+import { toast } from 'react-hot-toast';
+import { ArrowLeft, Calendar, CreditCard, ClipboardList, CheckCircle, Smartphone, Building, Banknote, Upload, Download, Loader2, PartyPopper, Hourglass } from 'lucide-react';
 
 export default function BookingPayment() {
   const navigate = useNavigate();
@@ -13,7 +15,6 @@ export default function BookingPayment() {
   const [submitting, setSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [createdBookingId, setCreatedBookingId] = useState(null);
-  const [isDeposit, setIsDeposit] = useState(false);
 
   const fieldId = searchParams.get('field_id');
   const date = searchParams.get('date');
@@ -28,6 +29,7 @@ export default function BookingPayment() {
     notes: '',
     payment_notes: '',
   });
+
   const [proofFile, setProofFile] = useState(null);
   const [proofPreview, setProofPreview] = useState(null);
   const [qrisImage, setQrisImage] = useState(null);
@@ -50,6 +52,9 @@ export default function BookingPayment() {
 
   const duration = calcDuration();
   const totalPrice = field ? duration * Number(field.price_per_hour) : 0;
+  
+  // Hanya jika metode adalah cash, maka wajib DP 50% via Midtrans
+  const isDeposit = formData.payment_method === 'cash';
   const depositAmount = isDeposit ? Math.round(totalPrice * 0.5) : totalPrice;
   const remainingAmount = Math.max(0, totalPrice - depositAmount);
 
@@ -78,12 +83,12 @@ export default function BookingPayment() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.payment_method) return alert('Pilih metode pembayaran!');
-    if (duration <= 0) return alert('Durasi tidak valid!');
+    if (!formData.payment_method) return toast.error('Pilih metode pembayaran!');
+    if (duration <= 0) return toast.error('Durasi tidak valid!');
 
-    // Require proof for non-cash methods
+    // Mewajibkan upload bukti HANYA JIKA BUKAN CASH
     if (formData.payment_method !== 'cash' && !proofFile) {
-      return alert('Upload bukti pembayaran terlebih dahulu!');
+      return toast.error('Upload bukti pembayaran terlebih dahulu!');
     }
 
     setSubmitting(true);
@@ -96,19 +101,46 @@ export default function BookingPayment() {
       payload.append('payment_method', formData.payment_method);
       payload.append('notes', formData.notes);
       payload.append('payment_notes', formData.payment_notes);
-      payload.append('is_deposit', String(isDeposit));
-      if (proofFile) payload.append('payment_proof', proofFile);
+      payload.append('is_deposit', isDeposit ? '1' : '0');
+      
+      if (proofFile && formData.payment_method !== 'cash') {
+        payload.append('payment_proof', proofFile);
+      }
 
       const res = await api.post('/bookings', payload, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
-      // Backend returns { message, booking } — booking object has the id
       const bookingData = res.data.booking || res.data.data || res.data;
+      const snapToken = res.data.snap_token; 
+      
       setCreatedBookingId(bookingData.id);
-      setShowSuccess(true);
+
+      if (snapToken) {
+        // Show Midtrans Snap Popup (Hanya untuk opsi Cash / DP)
+        window.snap.pay(snapToken, {
+          onSuccess: function(result) {
+            setShowSuccess(true);
+          },
+          onPending: function(result) {
+            setShowSuccess(true);
+          },
+          onError: function(result) {
+            toast.error('Pembayaran gagal! Silakan coba lagi nanti.');
+            navigate('/bookings');
+          },
+          onClose: function() {
+            toast.error('Anda menutup halaman pembayaran. Pesanan Anda tersimpan sebagai Pending.');
+            navigate('/bookings');
+          }
+        });
+      } else {
+        // Jika pembayaran manual upload bukti, langsung tampilkan success
+        setShowSuccess(true);
+      }
+      
     } catch (err) {
-      alert(err.response?.data?.message || 'Gagal membuat booking!');
+      toast.error(err.response?.data?.message || 'Gagal membuat booking!');
     } finally {
       setSubmitting(false);
     }
@@ -116,12 +148,10 @@ export default function BookingPayment() {
 
   const selectedMethod = PAYMENT_METHODS[formData.payment_method];
 
-  // Check if submit button should be disabled
   const isSubmitDisabled = () => {
     if (submitting) return true;
     if (!formData.payment_method) return true;
     if (duration <= 0) return true;
-    // Require proof for non-cash
     if (formData.payment_method !== 'cash' && !proofFile) return true;
     return false;
   };
@@ -142,9 +172,11 @@ export default function BookingPayment() {
         <button onClick={() => navigate('/schedule')} style={{
           background: 'none', border: 'none', color: 'var(--green-700)', cursor: 'pointer',
           fontSize: '14px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px'
-        }}>← Kembali ke Jadwal</button>
-        <h1 style={{ fontFamily: "'Poppins', sans-serif", fontSize: '24px', fontWeight: '700', color: 'var(--green-900)' }}>
-          🎯 Booking & Pembayaran
+        }}>
+          <ArrowLeft size={16} /> Kembali ke Jadwal
+        </button>
+        <h1 style={{ fontFamily: "'Poppins', sans-serif", fontSize: '24px', fontWeight: '700', color: 'var(--green-900)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Calendar color="#10b981" size={28} /> Booking & Pembayaran
         </h1>
       </div>
 
@@ -154,8 +186,8 @@ export default function BookingPayment() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             {/* Booking Details */}
             <div className="card">
-              <h3 style={{ fontFamily: "'Poppins', sans-serif", fontSize: '16px', fontWeight: '600', color: 'var(--green-800)', marginBottom: '16px' }}>
-                📋 Detail Pemesanan
+              <h3 style={{ fontFamily: "'Poppins', sans-serif", fontSize: '16px', fontWeight: '600', color: 'var(--green-800)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <ClipboardList size={18} color="#3b82f6" /> Detail Pemesanan
               </h3>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div className="form-group">
@@ -196,8 +228,8 @@ export default function BookingPayment() {
 
             {/* Payment Method */}
             <div className="card">
-              <h3 style={{ fontFamily: "'Poppins', sans-serif", fontSize: '16px', fontWeight: '600', color: 'var(--green-800)', marginBottom: '16px' }}>
-                💳 Metode Pembayaran
+              <h3 style={{ fontFamily: "'Poppins', sans-serif", fontSize: '16px', fontWeight: '600', color: 'var(--green-800)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <CreditCard size={18} color="#8b5cf6" /> Metode Pembayaran
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {Object.entries(PAYMENT_METHODS).map(([key, method]) => (
@@ -209,15 +241,23 @@ export default function BookingPayment() {
                     <div style={{
                       width: '40px', height: '40px', borderRadius: '10px',
                       background: formData.payment_method === key ? 'var(--green-100)' : 'var(--gray-100)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px'
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px',
+                      color: formData.payment_method === key ? 'var(--green-700)' : 'var(--gray-500)'
                     }}>
-                      {key === 'cash' ? '💵' : key === 'qris' ? '📱' : '🏦'}
+                      {key === 'cash' ? <Banknote size={20} /> : key === 'qris' ? <Smartphone size={20} /> : <Building size={20} />}
                     </div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: '600', fontSize: '14px', color: 'var(--gray-800)' }}>{method.label}</div>
-                      {method.account && (
+                      <div style={{ fontWeight: '600', fontSize: '14px', color: 'var(--gray-800)' }}>
+                        {key === 'cash' ? 'Tunai di Lokasi (Wajib DP 50% via Online)' : method.label}
+                      </div>
+                      {method.account && key !== 'cash' && (
                         <div style={{ fontSize: '12px', color: 'var(--gray-500)', marginTop: '2px' }}>
                           {method.account} a.n. {method.holder}
+                        </div>
+                      )}
+                      {key === 'cash' && (
+                        <div style={{ fontSize: '12px', color: 'var(--gray-500)', marginTop: '2px' }}>
+                          Bayar DP 50% sekarang via Midtrans, sisa dibayar tunai.
                         </div>
                       )}
                     </div>
@@ -235,7 +275,7 @@ export default function BookingPayment() {
               </div>
 
               {/* Transfer info */}
-              {selectedMethod?.account && (
+              {selectedMethod?.account && formData.payment_method !== 'cash' && (
                 <div style={{
                   marginTop: '16px', padding: '14px', background: 'var(--green-50)',
                   borderRadius: 'var(--radius-md)', border: '1px solid var(--green-200)'
@@ -268,11 +308,11 @@ export default function BookingPayment() {
                     {qrisImage ? (
                       <img src={qrisImage} alt="QRIS" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                     ) : (
-                      <span style={{ fontSize: '48px' }}>📱</span>
+                      <Smartphone size={48} color="#86efac" />
                     )}
                   </div>
                   <p style={{ fontSize: '12px', color: 'var(--gray-600)', marginTop: '12px' }}>
-                    QR Code akan dihasilkan otomatis dari detail booking. Pastikan scan dan unggah bukti pembayaran.
+                    QR Code dihasilkan otomatis. Pastikan scan dan unggah bukti pembayaran.
                   </p>
                   {qrisPayload && (
                     <div style={{ marginTop: '12px', padding: '12px', borderRadius: '12px', background: 'rgba(245, 255, 244, 0.85)', fontSize: '12px', color: 'var(--gray-700)', wordBreak: 'break-word' }}>
@@ -282,25 +322,25 @@ export default function BookingPayment() {
                 </div>
               )}
 
-              {/* Cash Info */}
+              {/* Cash Info (Midtrans) */}
               {formData.payment_method === 'cash' && (
                 <div style={{
                   marginTop: '16px', padding: '14px', background: 'var(--green-50)',
                   borderRadius: 'var(--radius-md)', border: '1px solid var(--green-200)'
                 }}>
-                  <p style={{ fontSize: '14px', fontWeight: '600', color: 'var(--green-800)', marginBottom: '4px' }}>
-                    💵 Bayar di Tempat
+                  <p style={{ fontSize: '14px', fontWeight: '600', color: 'var(--green-800)', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Banknote size={16} /> DP Otomatis via Midtrans
                   </p>
                   <p style={{ fontSize: '13px', color: 'var(--green-700)' }}>
-                    Silakan bayar langsung di kasir saat datang ke lapangan. Tunjukkan bukti booking Anda.
+                    Sistem akan memunculkan pop-up Midtrans untuk Anda membayar DP 50% secara instan.
                   </p>
                 </div>
               )}
 
-              {/* Payment Proof Upload — only for non-cash */}
+              {/* Payment Proof Upload — hanya untuk transfer manual & qris */}
               {formData.payment_method && formData.payment_method !== 'cash' && (
                 <div className="form-group" style={{ marginTop: '16px' }}>
-                  <label className="form-label">📎 Upload Bukti Pembayaran *</label>
+                  <label className="form-label flex items-center gap-2"><Upload size={14} /> Upload Bukti Pembayaran *</label>
                   <div style={{
                     border: '2px dashed var(--green-300)', borderRadius: 'var(--radius-md)',
                     padding: '24px', textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s',
@@ -312,13 +352,13 @@ export default function BookingPayment() {
                     {proofPreview ? (
                       <div>
                         <img src={proofPreview} alt="Bukti" style={{ maxHeight: '200px', maxWidth: '100%', borderRadius: '8px' }} />
-                        <p style={{ fontSize: '12px', color: 'var(--green-600)', marginTop: '8px', fontWeight: '500' }}>
-                          ✅ Bukti terupload — klik untuk ganti
+                        <p style={{ fontSize: '12px', color: 'var(--green-600)', marginTop: '8px', fontWeight: '500', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px' }}>
+                          <CheckCircle size={14} color="#10b981" /> Bukti terupload — klik untuk ganti
                         </p>
                       </div>
                     ) : (
                       <>
-                        <div style={{ fontSize: '36px', marginBottom: '8px' }}>📤</div>
+                        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}><Upload size={36} color="#22c55e" style={{ opacity: 0.8 }} /></div>
                         <p style={{ fontSize: '13px', color: 'var(--gray-500)' }}>Klik untuk upload bukti transfer</p>
                         <p style={{ fontSize: '11px', color: 'var(--gray-400)', marginTop: '4px' }}>JPG, PNG, PDF max 5MB</p>
                       </>
@@ -326,21 +366,6 @@ export default function BookingPayment() {
                   </div>
                 </div>
               )}
-
-              <div style={{ marginTop: '16px', padding: '14px', borderRadius: 'var(--radius-md)', background: 'var(--green-50)', border: '1px solid var(--green-200)' }}>
-                <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', cursor: 'pointer', fontWeight: '600', color: 'var(--green-800)', fontSize: '14px' }}>
-                  <span>💸 Bayar DP 50% untuk mengamankan slot</span>
-                  <input
-                    type="checkbox"
-                    checked={isDeposit}
-                    onChange={(e) => setIsDeposit(e.target.checked)}
-                    style={{ width: '16px', height: '16px', accentColor: 'var(--green-600)' }}
-                  />
-                </label>
-                <p style={{ fontSize: '12px', color: 'var(--green-700)', marginTop: '6px' }}>
-                  Aktifkan opsi ini jika Anda ingin membayar DP 50% sekarang, lalu melunasi sisanya secara tunai di lokasi.
-                </p>
-              </div>
 
               {/* Payment Notes */}
               {formData.payment_method && (
@@ -357,8 +382,8 @@ export default function BookingPayment() {
           {/* Right Column - Summary */}
           <div>
             <div className="card" style={{ position: 'sticky', top: '88px' }}>
-              <h3 style={{ fontFamily: "'Poppins', sans-serif", fontSize: '16px', fontWeight: '600', color: 'var(--green-800)', marginBottom: '16px' }}>
-                📝 Ringkasan Pesanan
+              <h3 style={{ fontFamily: "'Poppins', sans-serif", fontSize: '16px', fontWeight: '600', color: 'var(--green-800)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <ClipboardList size={18} color="#f59e0b" /> Ringkasan Pesanan
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '14px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -381,21 +406,16 @@ export default function BookingPayment() {
                   <span style={{ color: 'var(--gray-500)' }}>Harga/Jam</span>
                   <span style={{ fontWeight: '600' }}>{formatRupiah(field.price_per_hour)}</span>
                 </div>
-                {formData.payment_method && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: 'var(--gray-500)' }}>Pembayaran</span>
-                    <span style={{ fontWeight: '600' }}>{PAYMENT_METHODS[formData.payment_method]?.label}</span>
-                  </div>
-                )}
+                
                 <div style={{ borderTop: '2px solid var(--gray-200)', paddingTop: '12px', marginTop: '4px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontWeight: '600', fontSize: '15px', color: 'var(--gray-700)' }}>Total Pesanan</span>
+                    <span style={{ fontWeight: '600', fontSize: '15px', color: 'var(--gray-700)' }}>Total Harga</span>
                     <span style={{ fontWeight: '600', fontSize: '14px', color: 'var(--gray-700)' }}>{formatRupiah(totalPrice)}</span>
                   </div>
                   {isDeposit && (
                     <>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
-                        <span style={{ color: 'var(--gray-500)' }}>DP 50% dibayar sekarang</span>
+                        <span style={{ color: 'var(--gray-500)' }}>DP 50% dibayar online</span>
                         <span style={{ fontWeight: '600', color: 'var(--green-700)' }}>{formatRupiah(depositAmount)}</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
@@ -405,7 +425,7 @@ export default function BookingPayment() {
                     </>
                   )}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
-                    <span style={{ fontWeight: '700', fontSize: '15px', color: 'var(--gray-800)' }}>{isDeposit ? 'Bayar Sekarang' : 'Total Bayar'}</span>
+                    <span style={{ fontWeight: '700', fontSize: '15px', color: 'var(--gray-800)' }}>{isDeposit ? 'Bayar Sekarang (DP)' : 'Total Bayar (Penuh)'}</span>
                     <span style={{ fontWeight: '700', fontSize: '20px', color: 'var(--green-700)', fontFamily: "'Poppins', sans-serif" }}>
                       {formatRupiah(isDeposit ? depositAmount : totalPrice)}
                     </span>
@@ -413,14 +433,14 @@ export default function BookingPayment() {
                 </div>
               </div>
 
-              <button type="submit" className="btn btn-primary btn-lg"
+              <button type="submit" className="btn btn-primary btn-lg flex items-center justify-center gap-2"
                 disabled={isSubmitDisabled()}
                 style={{ width: '100%', marginTop: '24px' }}
               >
                 {submitting ? (
-                  <><div className="spinner" style={{ width: '18px', height: '18px', borderWidth: '2px' }}></div> Memproses...</>
+                  <><Loader2 className="animate-spin" size={20} /> Memproses...</>
                 ) : (
-                  '✅ KONFIRMASI PESANAN & BAYAR'
+                  <><CheckCircle size={20} color="#ffffff" /> KONFIRMASI PESANAN & BAYAR</>
                 )}
               </button>
 
@@ -442,21 +462,35 @@ export default function BookingPayment() {
       {/* Success Modal */}
       <Modal isOpen={showSuccess} onClose={() => {}}>
         <div style={{ textAlign: 'center', padding: '16px 0' }}>
-          <div style={{ fontSize: '60px', marginBottom: '16px' }}>🎉</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+            <div style={{
+              width: '80px', height: '80px', borderRadius: '50%',
+              background: 'linear-gradient(135deg, #dcfce7, #bbf7d0)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              animation: 'slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both'
+            }}>
+              <PartyPopper size={40} color="#16a34a" />
+            </div>
+          </div>
           <h2 style={{ fontFamily: "'Poppins', sans-serif", fontSize: '20px', fontWeight: '700', color: 'var(--green-800)', marginBottom: '8px' }}>
-            Booking Berhasil!
+            Pesanan Berhasil Dibuat!
           </h2>
           <p style={{ color: 'var(--gray-500)', fontSize: '14px', marginBottom: '8px' }}>
-            Pesanan Anda telah dikirim. Menunggu verifikasi pembayaran dari admin.
+            {formData.payment_method === 'cash' 
+              ? 'Midtrans sedang memproses DP Anda.' 
+              : 'Pesanan Anda sedang menunggu verifikasi admin.'}
           </p>
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '16px' }}>
-            <span className="badge badge-pending" style={{ fontSize: '12px', padding: '6px 14px' }}>📋 Status: Pending</span>
-            <span className="badge badge-menunggu" style={{ fontSize: '12px', padding: '6px 14px' }}>💳 Menunggu Verifikasi</span>
+            <span className={`badge ${formData.payment_method === 'cash' ? 'badge-pending' : 'badge-menunggu'}`} style={{ fontSize: '12px', padding: '6px 14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              {formData.payment_method === 'cash' 
+                ? <><CreditCard size={14} color="#92400e" /> Menunggu Pembayaran</> 
+                : <><Hourglass size={14} color="#92400e" /> Menunggu Verifikasi</>}
+            </span>
           </div>
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
             {createdBookingId && (
-              <button className="btn btn-outline" onClick={() => downloadPdf(createdBookingId)}>
-                📄 Download PDF
+              <button className="btn btn-outline" onClick={() => downloadPdf(createdBookingId)} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Download size={16} color="#15803d" /> Download PDF Sementara
               </button>
             )}
             <button className="btn btn-primary" onClick={() => navigate('/bookings')}>

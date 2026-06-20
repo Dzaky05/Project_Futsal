@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { toast } from 'react-hot-toast';
 
 const api = axios.create({
   baseURL: 'http://127.0.0.1:8000/api',
@@ -49,7 +50,30 @@ export const downloadPdf = async (bookingId) => {
     window.URL.revokeObjectURL(url);
   } catch (err) {
     console.error('PDF download error:', err);
-    alert('Gagal mengunduh PDF. Pastikan Anda sudah login.');
+    toast.error('Gagal mengunduh PDF. Pastikan Anda sudah login.');
+  }
+};
+
+export const exportReportPdf = async (month, year) => {
+  const toastId = toast.loading('Menyiapkan PDF...');
+  try {
+    const response = await api.get(`/admin/reports/export-pdf`, {
+      params: { month, year },
+      responseType: 'blob',
+    });
+    const blob = new Blob([response.data], { type: 'application/pdf' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `laporan-keuangan-${month}-${year}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+    toast.success('PDF berhasil diunduh', { id: toastId });
+  } catch (err) {
+    console.error('Report export error:', err);
+    toast.error('Gagal mengunduh laporan PDF.', { id: toastId });
   }
 };
 

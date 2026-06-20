@@ -46,4 +46,18 @@ class Booking extends Model
     {
         return $this->hasOne(Payment::class);
     }
+
+    public static function autoUpdateCompletedStatuses()
+    {
+        $now = \Carbon\Carbon::now();
+        self::where('status', 'confirmed')
+            ->where(function ($query) use ($now) {
+                $query->where('booking_date', '<', $now->toDateString())
+                      ->orWhere(function ($q) use ($now) {
+                          $q->where('booking_date', '=', $now->toDateString())
+                            ->where('end_time', '<=', $now->toTimeString());
+                      });
+            })
+            ->update(['status' => 'completed']);
+    }
 }

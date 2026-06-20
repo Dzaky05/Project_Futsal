@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import api from '../../api/axios';
 import { formatRupiah, formatDateShort, PAYMENT_STATUS, PAYMENT_METHODS } from '../../utils/auth';
 import Modal from '../../components/Modal';
+import ConfirmDialog from '../../components/ConfirmDialog';
+import { toast } from 'react-hot-toast';
+import { CreditCard, CheckCircle, XCircle, Clock, Loader2, Paperclip } from 'lucide-react';
 
 export default function PaymentVerification() {
   const [payments, setPayments] = useState([]);
@@ -11,6 +14,8 @@ export default function PaymentVerification() {
   const [showModal, setShowModal] = useState(false);
   const [rejectNotes, setRejectNotes] = useState('');
   const [proofUrl, setProofUrl] = useState(null);
+  const [confirmData, setConfirmData] = useState({ isOpen: false, id: null, status: null });
+  const [isVerifying, setIsVerifying] = useState(false);
 
   const fetchPayments = () => {
     setLoading(true);
@@ -25,6 +30,7 @@ export default function PaymentVerification() {
       .catch(() => setLoading(false));
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchPayments(); }, [filter]);
 
   useEffect(() => {
@@ -48,53 +54,67 @@ export default function PaymentVerification() {
         URL.revokeObjectURL(proofUrl);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showModal, selected]);
 
-  const verifyPayment = async (id, status) => {
-    const action = status === 'lunas' ? 'menyetujui' : 'menolak';
-    if (!window.confirm(`Yakin ingin ${action} pembayaran ini?`)) return;
+  const handleVerifyClick = (id, status) => {
+    setConfirmData({ isOpen: true, id, status });
+  };
+
+  const executeVerify = async () => {
+    const { id, status } = confirmData;
+    setIsVerifying(true);
     try {
       await api.put(`/admin/payments/${id}/verify`, {
         status,
         notes: status === 'ditolak' ? rejectNotes : ''
       });
+      toast.success(status === 'lunas' ? 'Pembayaran diterima' : 'Pembayaran ditolak');
       fetchPayments();
       setShowModal(false);
       setSelected(null);
       setRejectNotes('');
+      setConfirmData({ isOpen: false, id: null, status: null });
     } catch (err) {
-      alert(err.response?.data?.message || 'Gagal memverifikasi');
+      toast.error(err.response?.data?.message || 'Gagal memverifikasi');
+    } finally {
+      setIsVerifying(false);
     }
   };
 
   return (
     <div className="fade-in">
       <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontFamily: "'Poppins', sans-serif", fontSize: '24px', fontWeight: '700', color: 'var(--green-900)' }}>
-          💳 Verifikasi Pembayaran
+        <h1 style={{ fontFamily: "'Poppins', sans-serif", fontSize: '24px', fontWeight: '700', color: 'var(--green-900)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <CreditCard color="#a78bfa" size={28} /> Verifikasi Pembayaran
         </h1>
         <p style={{ color: 'var(--gray-500)', fontSize: '14px', marginTop: '4px' }}>Verifikasi bukti pembayaran dari pengguna</p>
       </div>
 
       <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
         {[
-          { key: 'menunggu_verifikasi', label: '⏳ Menunggu' },
-          { key: 'lunas', label: '✅ Lunas' },
-          { key: 'ditolak', label: '❌ Ditolak' },
-          { key: 'all', label: 'Semua' },
+          { key: 'menunggu_verifikasi', label: 'Menunggu', icon: <Clock size={14} /> },
+          { key: 'lunas', label: 'Lunas', icon: <CheckCircle size={14} /> },
+          { key: 'ditolak', label: 'Ditolak', icon: <XCircle size={14} /> },
+          { key: 'all', label: 'Semua', icon: null },
         ].map(f => (
           <button key={f.key}
             className={filter === f.key ? 'btn btn-primary btn-sm' : 'btn btn-outline btn-sm'}
             onClick={() => setFilter(f.key)}
-          >{f.label}</button>
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            {f.icon} {f.label}
+          </button>
         ))}
       </div>
 
       {loading ? (
-        <div className="loading-center"><div className="spinner"></div></div>
+        <div className="loading-center"><Loader2 className="animate-spin text-green-600" size={40} /></div>
       ) : payments.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: '60px', color: 'var(--gray-400)' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>✅</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+            <CheckCircle size={48} color="#22c55e" style={{ opacity: 0.5 }} />
+          </div>
           <p style={{ fontSize: '16px' }}>Tidak ada pembayaran yang perlu diverifikasi</p>
         </div>
       ) : (
@@ -126,12 +146,12 @@ export default function PaymentVerification() {
                 </div>
                 {isDeposit && (
                   <div style={{ marginTop: '8px', padding: '8px 10px', background: 'var(--green-50)', borderRadius: 'var(--radius-sm)', color: 'var(--green-700)', fontSize: '12px', fontWeight: '600' }}>
-                    💸 DP 50% • Sisa tagihan {formatRupiah(p.remaining_amount || 0)}
+                    DP 50% • Sisa tagihan {formatRupiah(p.remaining_amount || 0)}
                   </div>
                 )}
                 {p.payment_proof && (
-                  <div style={{ marginTop: '12px', padding: '8px', background: 'var(--green-50)', borderRadius: 'var(--radius-sm)', textAlign: 'center', fontSize: '12px', color: 'var(--green-700)' }}>
-                    📎 Ada bukti pembayaran
+                  <div style={{ marginTop: '12px', padding: '8px', background: 'var(--green-50)', borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '12px', color: 'var(--green-700)' }}>
+                    <Paperclip size={14} /> Ada bukti pembayaran
                   </div>
                 )}
               </div>
@@ -166,7 +186,9 @@ export default function PaymentVerification() {
             {/* Payment Proof Image */}
             {selected.payment_proof && proofUrl && (
               <div style={{ marginBottom: '16px' }}>
-                <p style={{ fontSize: '13px', fontWeight: '600', marginBottom: '8px' }}>📎 Bukti Pembayaran:</p>
+                <p style={{ fontSize: '13px', fontWeight: '600', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Paperclip size={14} /> Bukti Pembayaran:
+                </p>
                 <img
                   src={proofUrl}
                   alt="Bukti Pembayaran"
@@ -186,13 +208,13 @@ export default function PaymentVerification() {
                     style={{ minHeight: '60px' }} />
                 </div>
                 <div style={{ display: 'flex', gap: '10px' }}>
-                  <button className="btn btn-primary" style={{ flex: 1 }}
-                    onClick={() => verifyPayment(selected.id, 'lunas')}>
-                    ✅ Terima (Lunas)
+                  <button className="btn btn-primary" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                    onClick={() => handleVerifyClick(selected.id, 'lunas')}>
+                    <CheckCircle size={16} /> Terima (Lunas)
                   </button>
-                  <button className="btn btn-danger" style={{ flex: 1 }}
-                    onClick={() => verifyPayment(selected.id, 'ditolak')}>
-                    ❌ Tolak
+                  <button className="btn btn-danger" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                    onClick={() => handleVerifyClick(selected.id, 'ditolak')}>
+                    <XCircle size={16} /> Tolak
                   </button>
                 </div>
               </div>
@@ -200,6 +222,16 @@ export default function PaymentVerification() {
           </div>
         )}
       </Modal>
+
+      <ConfirmDialog
+        isOpen={confirmData.isOpen}
+        title={confirmData.status === 'lunas' ? 'Terima Pembayaran?' : 'Tolak Pembayaran?'}
+        description={confirmData.status === 'lunas' ? 'Apakah Anda yakin ingin menyetujui pembayaran ini? Status booking akan otomatis berubah menjadi Dikonfirmasi.' : 'Apakah Anda yakin ingin menolak pembayaran ini? Booking dapat dibatalkan otomatis.'}
+        onConfirm={executeVerify}
+        onCancel={() => setConfirmData({ isOpen: false, id: null, status: null })}
+        type={confirmData.status === 'lunas' ? 'success' : 'danger'}
+        isLoading={isVerifying}
+      />
     </div>
   );
 }
